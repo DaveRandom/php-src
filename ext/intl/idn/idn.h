@@ -27,4 +27,7 @@ PHP_FUNCTION(idn_to_utf8);
 
 void idn_register_constants(INIT_FUNC_ARGS);
 
+PHPAPI int php_idn_u2a(const char *domain, int domain_len, char **output);
+PHPAPI int php_idn_a2u(const char *domain, int domain_len, char **output);
+
 #endif /* IDN_IDN_H */

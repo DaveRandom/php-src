@@ -133,45 +133,85 @@ static inline void php_intl_bad_args(const char *msg, int mode TSRMLS_DC)
 }
 
 #ifdef HAVE_46_API
-static void php_intl_idn_to_46(INTERNAL_FUNCTION_PARAMETERS,
-		const char *domain, int domain_len, uint32_t option, int mode, zval *idna_info)
+static void php_intl_idn_uts46_convert(const char *domain, int domain_len, uint32_t option, int mode,
+		char **output, int *output_len, UIDNAInfo *info, UErrorCode *status)
 {
-	UErrorCode	  status = U_ZERO_ERROR;
-	UIDNA		  *uts46;
-	int32_t		  len;
-	int32_t		  buffer_capac = 255; /* no domain name may exceed this */
-	char		  *buffer = emalloc(buffer_capac);
-	UIDNAInfo	  info = UIDNA_INFO_INITIALIZER;
-	int			  buffer_used = 0;
-	
-	uts46 = uidna_openUTS46(option, &status);
-	if (php_intl_idn_check_status(status, "failed to open UIDNA instance",
-			mode TSRMLS_CC) == FAILURE) {
+	UIDNA   *uts46;
+	int32_t buffer_capac = 255; /* no domain name may exceed this */
+	char    *buffer = emalloc(buffer_capac);
+	int32_t buffer_len = 0;
+
+	*status = U_ZERO_ERROR;
+
+	uts46 = uidna_openUTS46(option, status);
+	if (U_FAILURE(*status)) {
 		efree(buffer);
-		RETURN_FALSE;
+		return;
 	}
 
 	if (mode == INTL_IDN_TO_ASCII) {
-		len = uidna_nameToASCII_UTF8(uts46, domain, (int32_t)domain_len,
-				buffer, buffer_capac, &info, &status);
+		buffer_len = uidna_nameToASCII_UTF8(uts46, domain, (int32_t)domain_len,
+				buffer, buffer_capac, info, status);
 	} else {
-		len = uidna_nameToUnicodeUTF8(uts46, domain, (int32_t)domain_len,
-				buffer, buffer_capac, &info, &status);
+		buffer_len = uidna_nameToUnicodeUTF8(uts46, domain, (int32_t)domain_len,
+				buffer, buffer_capac, info, status);
 	}
+
+	php_printf("Length is %d\n", buffer_len);
+
+	if (!U_FAILURE(*status)) {
+		buffer[buffer_len] = '\0';
+		*output = buffer;
+		*output_len = buffer_len;
+	}
+
+	uidna_close(uts46);
+	efree(buffer);
+}
+
+int php_idn_u2a(const char *domain, int domain_len, char **output)
+{
+	int        output_len = 0;
+	UIDNAInfo  info = UIDNA_INFO_INITIALIZER;
+	UErrorCode status;
+
+	php_intl_idn_uts46_convert(domain, domain_len, 0, INTL_IDN_TO_ASCII, output, &output_len, &info, &status);
+
+	return U_FAILURE(status) ? -1 : output_len;
+}
+
+int php_idn_a2u(const char *domain, int domain_len, char **output)
+{
+	int        output_len = 0;
+	UIDNAInfo  info = UIDNA_INFO_INITIALIZER;
+	UErrorCode status;
+
+	php_intl_idn_uts46_convert(domain, domain_len, 0, INTL_IDN_TO_UTF8, output, &output_len, &info, &status);
+
+	return U_FAILURE(status) ? -1 : output_len;
+}
+
+static void php_intl_idn_to_46(INTERNAL_FUNCTION_PARAMETERS,
+		const char *domain, int domain_len, uint32_t option, int mode, zval *idna_info)
+{
+	char       *buffer;
+	int        buffer_len = 0;
+	UIDNAInfo  info = UIDNA_INFO_INITIALIZER;
+	UErrorCode status;
+	int        buffer_used = 0;
+
+	php_intl_idn_uts46_convert(domain, domain_len, option, mode, &buffer, &buffer_len, &info, &status);
 	if (php_intl_idn_check_status(status, "failed to convert name",
 			mode TSRMLS_CC) == FAILURE) {
-		uidna_close(uts46);
 		efree(buffer);
 		RETURN_FALSE;
 	}
-	if (len >= 255) {
-		php_error_docref(NULL TSRMLS_CC, E_ERROR, "ICU returned an unexpected length");
+	if (buffer_len >= 255) {
+		php_error_docref(NULL TSRMLS_CC, E_ERROR, "ICU returned an unexpected length %d", buffer_len);
 	}
 
-	buffer[len] = '\0';
-
 	if (info.errors == 0) {
-		RETVAL_STRINGL(buffer, len, 0);
+		RETVAL_STRINGL(buffer, buffer_len, 0);
 		buffer_used = 1;
 	} else {
 		RETVAL_FALSE;
@@ -184,7 +224,7 @@ static void php_intl_idn_to_46(INTERNAL_FUNCTION_PARAMETERS,
 		} else {
 			zval *zv;
 			ALLOC_INIT_ZVAL(zv);
-			ZVAL_STRINGL(zv, buffer, len, 0);
+			ZVAL_STRINGL(zv, buffer, buffer_len, 0);
 			buffer_used = 1;
 			add_assoc_zval_ex(idna_info, "result", sizeof("result"), zv);
 		}
@@ -196,8 +236,6 @@ static void php_intl_idn_to_46(INTERNAL_FUNCTION_PARAMETERS,
 	if (!buffer_used) {
 		efree(buffer);
 	}
-
-	uidna_close(uts46);
 }
 #endif
 
