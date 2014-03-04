@@ -25,8 +25,6 @@
 
 #include <stddef.h>
 
-
-
 #ifdef PHP_WIN32
 # include <Ws2tcpip.h>
 # include "win32/inet.h"
@@ -105,6 +103,11 @@ const struct in6_addr in6addr_any = {0}; /* IN6ADDR_ANY_INIT; */
 # define PHP_TIMEOUT_ERROR_VALUE		ETIMEDOUT
 #endif
 
+#ifdef HAVE_INTL
+#include "ext/intl/idn/idn.h"
+#define HAVE_IDN 1
+#endif
+
 #if HAVE_GETADDRINFO
 #ifdef HAVE_GAI_STRERROR
 #  define PHP_GAI_STRERROR(x) (gai_strerror(x))
@@ -170,6 +173,7 @@ PHPAPI int php_network_getaddresses(const char *host, int socktype, struct socka
 {
 	struct sockaddr **sap;
 	int n;
+	char *target;
 #if HAVE_GETADDRINFO
 # if HAVE_IPV6
 	static int ipv6_borked = -1; /* the way this is used *is* thread safe */
@@ -183,6 +187,13 @@ PHPAPI int php_network_getaddresses(const char *host, int socktype, struct socka
 	if (host == NULL) {
 		return 0;
 	}
+
+#ifdef HAVE_IDN
+	php_idn_u2a(host, &target);
+#else
+	target = host;
+#endif
+
 #if HAVE_GETADDRINFO
 	memset(&hints, '\0', sizeof(hints));
 
@@ -210,7 +221,7 @@ PHPAPI int php_network_getaddresses(const char *host, int socktype, struct socka
 	hints.ai_family = ipv6_borked ? AF_INET : AF_UNSPEC;
 # endif
 
-	if ((n = getaddrinfo(host, NULL, &hints, &res))) {
+	if ((n = getaddrinfo(target, NULL, &hints, &res))) {
 		if (error_string) {
 			spprintf(error_string, 0, "php_network_getaddresses: getaddrinfo failed: %s", PHP_GAI_STRERROR(n));
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", *error_string);
@@ -244,9 +255,9 @@ PHPAPI int php_network_getaddresses(const char *host, int socktype, struct socka
 
 	freeaddrinfo(res);
 #else
-	if (!inet_aton(host, &in)) {
+	if (!inet_aton(target, &in)) {
 		/* XXX NOT THREAD SAFE (is safe under win32) */
-		host_info = gethostbyname(host);
+		host_info = gethostbyname(target);
 		if (host_info == NULL) {
 			if (error_string) {
 				spprintf(error_string, 0, "php_network_getaddresses: gethostbyname failed. errno=%d", errno);
@@ -266,6 +277,10 @@ PHPAPI int php_network_getaddresses(const char *host, int socktype, struct socka
 	((struct sockaddr_in *)*sap)->sin_addr = in;
 	sap++;
 	n = 1;
+#endif
+
+#ifdef HAVE_IDN
+	efree(target);
 #endif
 
 	*sap = NULL;
