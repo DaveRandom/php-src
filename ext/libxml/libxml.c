@@ -728,11 +728,32 @@ PHP_LIBXML_API void php_libxml_error_handler(void *ctx, const char *msg, ...)
 	va_end(args);
 }
 
+static void php_libxml_free(void *mem)
+{
+	efree(mem);
+}
+
+static void *php_libxml_malloc(size_t size)
+{
+	return emalloc(size);
+}
+
+static void *php_libxml_realloc(void *mem, size_t size)
+{
+	return erealloc(mem, size);
+}
+
+static char *php_libxml_strdup(const char *str)
+{
+	return estrdup(str);
+}
 
 PHP_LIBXML_API void php_libxml_initialize(void)
 {
 	if (!_php_libxml_initialized) {
 		/* we should be the only one's to ever init!! */
+		xmlMemSetup((xmlFreeFunc)php_libxml_free, (xmlMallocFunc)php_libxml_malloc, (xmlReallocFunc)php_libxml_realloc, (xmlStrdupFunc)php_libxml_strdup);
+
 		xmlInitParser();
 		
 		_php_libxml_default_entity_loader = xmlGetExternalEntityLoader();
