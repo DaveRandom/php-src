@@ -1360,9 +1360,55 @@ ZEND_API int shift_left_function(zval *result, zval *op1, zval *op2 TSRMLS_DC) /
 	if (Z_TYPE_P(op1) != IS_LONG || Z_TYPE_P(op2) != IS_LONG) {
 		ZEND_TRY_BINARY_OBJECT_OPERATION(ZEND_SL);
 
+		zendi_convert_to_long(op2, op2_copy, result);
+
+		if (Z_TYPE_P(op1) == IS_STRING) {
+			int skip, copylen;
+			unsigned char offsetl;
+			char *output;
+
+			if (Z_LVAL_P(op2) < 0) {
+				zend_error(E_NOTICE, "Invalid right operand for left shift operation: %d", Z_LVAL_P(op2));
+				ZVAL_STRINGL(result, Z_STRVAL_P(op1), Z_STRLEN_P(op1), 1);
+				return SUCCESS;
+			}
+
+			skip = Z_LVAL_P(op2) / 8;
+			copylen = Z_STRLEN_P(op1) - skip;
+
+			output = emalloc((size_t) Z_STRLEN_P(op1) + 1);
+
+			if (copylen <= 0) {
+				memset(output, 0, Z_STRLEN_P(op1) + 1);
+				ZVAL_STRINGL(result, output, Z_STRLEN_P(op1), 0);
+				return SUCCESS;
+			}
+
+			offsetl = Z_LVAL_P(op2) % 8;
+			memset(output + copylen, 0, skip + 1);
+
+			if (offsetl == 8) {
+				memcpy(output, Z_STRVAL_P(op1) + skip, copylen);
+			} else {
+				int i;
+				unsigned char offsetr, mask;
+				char *input;
+
+				offsetr = 8 - offsetl;
+				mask = ~(0xff >> offsetl);
+				input = Z_STRVAL_P(op1);
+
+				for (i = 0; i < copylen; i++) {
+					output[i] = (input[i + skip] << offsetl) | ((input[i + skip + 1] & mask) >> offsetr); 
+				}
+			}
+
+			ZVAL_STRINGL(result, output, Z_STRLEN_P(op1), 0);
+			return SUCCESS;
+		}
+
 		zendi_convert_to_long(op1, op1_copy, result);
 		op1_lval = Z_LVAL_P(op1);
-		zendi_convert_to_long(op2, op2_copy, result);
 	} else {
 		op1_lval = Z_LVAL_P(op1);
 	}
@@ -1380,9 +1426,59 @@ ZEND_API int shift_right_function(zval *result, zval *op1, zval *op2 TSRMLS_DC) 
 	if (Z_TYPE_P(op1) != IS_LONG || Z_TYPE_P(op2) != IS_LONG) {
 		ZEND_TRY_BINARY_OBJECT_OPERATION(ZEND_SR);
 
+		zendi_convert_to_long(op2, op2_copy, result);
+
+		if (Z_TYPE_P(op1) == IS_STRING) {
+			int skip, copylen;
+			unsigned char offsetr, signbits;
+			char *input, *output;
+
+			if (Z_LVAL_P(op2) < 0) {
+				zend_error(E_NOTICE, "Invalid right operand for right shift operation: %d", Z_LVAL_P(op2));
+				ZVAL_STRINGL(result, Z_STRVAL_P(op1), Z_STRLEN_P(op1), 1);
+				return SUCCESS;
+			}
+
+			skip = Z_LVAL_P(op2) / 8;
+			copylen = Z_STRLEN_P(op1) - skip;
+
+			input = Z_STRVAL_P(op1);
+			signbits = (input[0] & 0x80) == 0 ? 0 : 255;
+
+			output = emalloc((size_t) Z_STRLEN_P(op1) + 1);
+			if (copylen <= 0) {
+				memset(output, signbits, Z_STRLEN_P(op1) + 1);
+				ZVAL_STRINGL(result, output, Z_STRLEN_P(op1), 0);
+				return SUCCESS;
+			}
+
+			offsetr = Z_LVAL_P(op2) % 8;
+
+			output[Z_STRLEN_P(op1)] = 0;
+			memset(output, signbits, skip);
+
+			if (offsetr == 8) {
+				memcpy(output + skip, Z_STRVAL_P(op1), copylen);
+			} else {
+				int i, l;
+				unsigned char offsetl, mask;
+
+				offsetl = 8 - offsetr;
+				mask = ~(0xff >> offsetl);
+
+				output[skip] = (signbits & ~(0xff >> offsetl)) | (input[0] >> offsetr);
+
+				for (i = skip + 1, l = skip + copylen; i < l; i++) {
+					output[i] = (input[(i - skip) - 1] << offsetl) | ((input[i - skip] & mask) >> offsetr); 
+				}
+			}
+
+			ZVAL_STRINGL(result, output, Z_STRLEN_P(op1), 0);
+			return SUCCESS;
+		}
+
 		zendi_convert_to_long(op1, op1_copy, result);
 		op1_lval = Z_LVAL_P(op1);
-		zendi_convert_to_long(op2, op2_copy, result);
 	} else {
 		op1_lval = Z_LVAL_P(op1);
 	}

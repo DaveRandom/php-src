@@ -3,16 +3,14 @@ Test << operator : numbers as strings, simple
 --FILE--
 <?php
 
-error_reporting(E_ERROR);
-
-var_dump("12" << "0");
-var_dump("34" << "1");
-var_dump("56" << "2");
+var_dump("12" << 0);
+var_dump("34" << 1);
+var_dump(bin2hex("56" << 2));
 
 ?>
 ===DONE===
 --EXPECT--
-int(12)
-int(68)
-int(224)
+string(2) "12"
+string(2) "fh"
+string(4) "d4d8"
 ===DONE===
