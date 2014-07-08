@@ -43,6 +43,8 @@ typedef unsigned __int64 php_timeout_ull;
 #define GET_CTX_OPT(stream, wrapper, name, val) (stream->context && SUCCESS == php_stream_context_get_option(stream->context, wrapper, name, &val))
 
 static php_stream_context *decode_context_param(zval *contextresource TSRMLS_DC);
+void user_space_stream_notifier(php_stream_context *context, int notifycode, int severity,
+		char *xmsg, int xcode, size_t bytes_sofar, size_t bytes_max, void * ptr TSRMLS_DC);
 
 /* Streams based network functions */
 

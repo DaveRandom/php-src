@@ -2160,7 +2160,7 @@ PHPAPI php_stream *_php_stream_open_wrapper_ex(const char *path, const char *mod
 }
 /* }}} */
 
-static void user_space_stream_notifier(php_stream_context *context, int notifycode, int severity,
+void user_space_stream_notifier(php_stream_context *context, int notifycode, int severity,
 		char *xmsg, int xcode, size_t bytes_sofar, size_t bytes_max, void * ptr TSRMLS_DC)
 {
 	zval *callback = (zval*)context->notifier->ptr;
@@ -2199,7 +2199,7 @@ static void user_space_stream_notifier(php_stream_context *context, int notifyco
 	}
 }
 
-static void user_space_stream_notifier_dtor(php_stream_notifier *notifier)
+void user_space_stream_notifier_dtor(php_stream_notifier *notifier)
 {
 	if (notifier && notifier->ptr) {
 		zval_ptr_dtor((zval **)&(notifier->ptr));
