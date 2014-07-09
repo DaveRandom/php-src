@@ -931,8 +931,8 @@ static PHP_FUNCTION(libxml_set_streams_context)
 		zval_ptr_dtor(&LIBXML(stream_context));
 		LIBXML(stream_context) = NULL;
 	}
-	Z_ADDREF_P(arg);
-	LIBXML(stream_context) = arg;
+
+	php_stream_context_to_zval(php_stream_context_from_zval_no_default(arg), LIBXML(stream_context));
 }
 /* }}} */
 

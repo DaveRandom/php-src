@@ -462,7 +462,7 @@ PHP_FUNCTION(hash_update_file)
 	char *filename, buf[1024];
 	int filename_len, n;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs|r", &zhash, &filename, &filename_len, &zcontext) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs|z", &zhash, &filename, &filename_len, &zcontext) == FAILURE) {
 		return;
 	}
 

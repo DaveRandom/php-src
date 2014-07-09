@@ -42,7 +42,6 @@ typedef unsigned __int64 php_timeout_ull;
 
 #define GET_CTX_OPT(stream, wrapper, name, val) (stream->context && SUCCESS == php_stream_context_get_option(stream->context, wrapper, name, &val))
 
-static php_stream_context *decode_context_param(zval *contextresource TSRMLS_DC);
 void user_space_stream_notifier(php_stream_context *context, int notifycode, int severity,
 		char *xmsg, int xcode, size_t bytes_sofar, size_t bytes_max, void * ptr TSRMLS_DC);
 
@@ -189,7 +188,7 @@ PHP_FUNCTION(stream_socket_server)
 
 	RETVAL_FALSE;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|zzlr", &host, &host_len, &zerrno, &zerrstr, &flags, &zcontext) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|zzlz", &host, &host_len, &zerrno, &zerrstr, &flags, &zcontext) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -867,36 +866,6 @@ PHP_FUNCTION(stream_select)
 }
 /* }}} */
 
-/* {{{ stream_context related functions */
-/* given a zval which is either a stream or a context, return the underlying
- * stream_context.  If it is a stream that does not have a context assigned, it
- * will create and assign a context and return that.  */
-static php_stream_context *decode_context_param(zval *contextresource TSRMLS_DC)
-{
-	php_stream_context *context = NULL;
-
-	context = zend_fetch_resource(&contextresource TSRMLS_CC, -1, NULL, NULL, 1, php_le_stream_context(TSRMLS_C));
-	if (context == NULL) {
-		php_stream *stream;
-
-		stream = zend_fetch_resource(&contextresource TSRMLS_CC, -1, NULL, NULL, 2, php_file_le_stream(), php_file_le_pstream);
-
-		if (stream) {
-			context = stream->context;
-			if (context == NULL) {
-				/* Only way this happens is if file is opened with NO_DEFAULT_CONTEXT
-				   param, but then something is called which requires a context.
-				   Don't give them the default one though since they already said they
-	 			   didn't want it. */
-				context = stream->context = php_stream_context_alloc(TSRMLS_C);
-			}
-		}
-	}
-
-	return context;
-}
-/* }}} */
-
 /* {{{ proto array stream_context_get_options(resource context|resource stream)
    Retrieve options for a stream/wrapper/context */
 PHP_FUNCTION(stream_context_get_options)
@@ -904,10 +873,10 @@ PHP_FUNCTION(stream_context_get_options)
 	zval *zcontext;
 	php_stream_context *context;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &zcontext) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zcontext) == FAILURE) {
 		RETURN_FALSE;
 	}
-	context = decode_context_param(zcontext TSRMLS_CC);
+	context = php_stream_context_from_zval_no_default(zcontext);
 	if (!context) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid stream/context parameter");
 		RETURN_FALSE;
@@ -930,14 +899,14 @@ PHP_FUNCTION(stream_context_set_option)
 				"rssz", &zcontext, &wrappername, &wrapperlen,
 				&optionname, &optionlen, &zvalue) == FAILURE) {
 		if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC,
-					"ra", &zcontext, &options) == FAILURE) {
+					"rz", &zcontext, &options) == FAILURE) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "called with wrong number or type of parameters; please RTM");
 			RETURN_FALSE;
 		}
 	}
 
 	/* figure out where the context is coming from exactly */
-	context = decode_context_param(zcontext TSRMLS_CC);
+	context = php_stream_context_from_zval_no_default(zcontext);
 	if (!context) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid stream/context parameter");
 		RETURN_FALSE;
@@ -945,7 +914,7 @@ PHP_FUNCTION(stream_context_set_option)
 
 	if (options) {
 		/* handle the array syntax */
-		RETVAL_BOOL(parse_context_options(context, options TSRMLS_CC) == SUCCESS);
+		RETVAL_BOOL(php_stream_context_hydrate(context, options, NULL TSRMLS_CC) == SUCCESS);
 	} else {
 		php_stream_context_set_option(context, wrappername, optionname, zvalue);
 		RETVAL_TRUE;
@@ -960,17 +929,17 @@ PHP_FUNCTION(stream_context_set_params)
 	zval *params, *zcontext;
 	php_stream_context *context;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ra", &zcontext, &params) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rz", &zcontext, &params) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	context = decode_context_param(zcontext TSRMLS_CC);
+	context = php_stream_context_from_zval_no_default(zcontext);
 	if (!context) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid stream/context parameter");
 		RETURN_FALSE;
 	}
 
-	RETVAL_BOOL(parse_context_params(context, params TSRMLS_CC) == SUCCESS);
+	RETVAL_BOOL(php_stream_context_hydrate(context, NULL, params TSRMLS_CC) == SUCCESS);
 }
 /* }}} */
 
@@ -981,11 +950,11 @@ PHP_FUNCTION(stream_context_get_params)
 	zval *zcontext, *options;
 	php_stream_context *context;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &zcontext) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zcontext) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	context = decode_context_param(zcontext TSRMLS_CC);
+	context = php_stream_context_from_zval_no_default(zcontext);
 	if (!context) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid stream/context parameter");
 		RETURN_FALSE;
@@ -1009,7 +978,7 @@ PHP_FUNCTION(stream_context_get_default)
 	zval *params = NULL;
 	php_stream_context *context;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a", &params) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a", &options) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -1018,8 +987,8 @@ PHP_FUNCTION(stream_context_get_default)
 	}
 	context = FG(default_context);
 
-	if (params) {
-		parse_context_options(context, params TSRMLS_CC);
+	if (options) {
+		php_stream_context_hydrate(context, options, NULL TSRMLS_CC);
 	}
 
 	php_stream_context_to_zval(context, return_value);
@@ -1042,7 +1011,7 @@ PHP_FUNCTION(stream_context_set_default)
 	}
 	context = FG(default_context);
 
-	parse_context_options(context, options TSRMLS_CC);
+	php_stream_context_hydrate(context, options, NULL TSRMLS_CC);
 
 	php_stream_context_to_zval(context, return_value);
 }
@@ -1060,14 +1029,7 @@ PHP_FUNCTION(stream_context_create)
 	}
 
 	context = php_stream_context_alloc(TSRMLS_C);
-
-	if (options) {
-		parse_context_options(context, options TSRMLS_CC);
-	}
-
-	if (params) {
-		parse_context_params(context, params TSRMLS_CC);
-	}
+	php_stream_context_hydrate(context, options, params TSRMLS_CC);
 
 	RETURN_RESOURCE(context->rsrc_id);
 }
