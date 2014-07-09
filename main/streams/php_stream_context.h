@@ -30,6 +30,8 @@ typedef void (*php_stream_notification_func)(php_stream_context *context,
 #define PHP_STREAM_NOTIFIER_PROGRESS	1
 
 #define php_stream_context_from_zval(zcontext, nodefault) _php_stream_context_from_zval(zcontext, nodefault TSRMLS_CC)
+#define php_stream_context_from_zval_or_default(zcontext) _php_stream_context_from_zval(zcontext, 0 TSRMLS_CC)
+#define php_stream_context_from_zval_no_default(zcontext) _php_stream_context_from_zval(zcontext, 1 TSRMLS_CC)
 #define php_stream_context_to_zval(context, zval) { ZVAL_RESOURCE(zval, (context)->rsrc_id); zend_list_addref((context)->rsrc_id); }
 
 typedef struct _php_stream_notifier php_stream_notifier;
@@ -51,13 +53,12 @@ struct _php_stream_context {
 BEGIN_EXTERN_C()
 PHPAPI void php_stream_context_free(php_stream_context *context);
 PHPAPI php_stream_context *php_stream_context_alloc(TSRMLS_D);
+PHPAPI void php_stream_context_hydrate(php_stream_context *context, zval *options, zval *params TSRMLS_DC);
 PHPAPI php_stream_context *_php_stream_context_from_zval(zval *zcontext, int nodefault TSRMLS_DC);
 PHPAPI int php_stream_context_get_option(php_stream_context *context,
 		const char *wrappername, const char *optionname, zval ***optionvalue);
 PHPAPI int php_stream_context_set_option(php_stream_context *context,
 		const char *wrappername, const char *optionname, zval *optionvalue);
-PHPAPI int parse_context_options(php_stream_context *context, zval *options TSRMLS_DC);
-PHPAPI int parse_context_params(php_stream_context *context, zval *params TSRMLS_DC);
 
 PHPAPI php_stream_notifier *php_stream_notification_alloc(void);
 PHPAPI void php_stream_notification_free(php_stream_notifier *notifier);

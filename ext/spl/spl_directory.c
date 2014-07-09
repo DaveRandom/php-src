@@ -523,6 +523,8 @@ static spl_filesystem_object * spl_filesystem_object_create_type(int ht, spl_fil
 			zval_ptr_dtor(&arg1);
 			zval_ptr_dtor(&arg2);
 		} else {
+			zval *zcontext;
+
 			intern->file_name = source->file_name;
 			intern->file_name_len = source->file_name_len;
 			intern->_path = spl_filesystem_object_get_path(source, &intern->_path_len TSRMLS_CC);
@@ -531,9 +533,9 @@ static spl_filesystem_object * spl_filesystem_object_create_type(int ht, spl_fil
 			intern->u.file.open_mode = "r";
 			intern->u.file.open_mode_len = 1;
 		
-			if (ht && zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sbr", 
+			if (ht && zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sbz", 
 					&intern->u.file.open_mode, &intern->u.file.open_mode_len, 
-					&use_include_path, &intern->u.file.zcontext) == FAILURE) {
+					&use_include_path, &zcontext) == FAILURE) {
 				zend_restore_error_handling(&error_handling TSRMLS_CC);
 				intern->u.file.open_mode = NULL;
 				intern->file_name = NULL;
@@ -541,7 +543,9 @@ static spl_filesystem_object * spl_filesystem_object_create_type(int ht, spl_fil
 				Z_TYPE_P(return_value) = IS_NULL;
 				return NULL;
 			}
-		
+
+			php_stream_context_to_zval(php_stream_context_from_zval_no_default(zcontext), intern->u.file.zcontext);
+
 			if (spl_filesystem_file_open(intern, use_include_path, 0 TSRMLS_CC) == FAILURE) {
 				zend_restore_error_handling(&error_handling TSRMLS_CC);
 				zval_dtor(return_value);
