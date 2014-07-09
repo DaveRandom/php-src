@@ -2258,7 +2258,7 @@ PHPAPI php_stream_context *php_stream_context_alloc(TSRMLS_D)
 	return context;
 }
 
-PHPAPI php_stream_context *php_stream_context_from_zval(zval *zcontext, int nodefault TSRMLS_DC)
+PHPAPI php_stream_context *_php_stream_context_from_zval(zval *zcontext, int nodefault TSRMLS_DC)
 {
 	if (!zcontext) {
 		if (nodefault) {
