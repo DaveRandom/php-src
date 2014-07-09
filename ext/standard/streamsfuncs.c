@@ -975,7 +975,7 @@ PHP_FUNCTION(stream_context_get_params)
    Get a handle on the default file/stream context and optionally set parameters */
 PHP_FUNCTION(stream_context_get_default)
 {
-	zval *params = NULL;
+	zval *options = NULL;
 	php_stream_context *context;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a", &options) == FAILURE) {
