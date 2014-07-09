@@ -2343,7 +2343,7 @@ PHPAPI int php_stream_context_hydrate(php_stream_context *context, zval *zoption
 			return FAILURE;
 		}
 
-		if (parse_context_options(context, zoptions) != SUCCESS) {
+		if (parse_context_options(context, zoptions TSRMLS_CC) != SUCCESS) {
 			return FAILURE;
 		}
 	}
@@ -2363,7 +2363,7 @@ PHPAPI int php_stream_context_hydrate(php_stream_context *context, zval *zoption
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "params must be an associative array");
 			}
 
-			if (parse_context_params(context, zparams) != SUCCESS) {
+			if (parse_context_params(context, zparams TSRMLS_CC) != SUCCESS) {
 				return FAILURE;
 			}
 		}
@@ -2388,7 +2388,7 @@ PHPAPI php_stream_context *_php_stream_context_from_zval(zval *zcontext, int nod
 			if (!context) {
 				php_stream *stream;
 
-				stream = zend_fetch_resource(&contextresource TSRMLS_CC, -1, NULL, NULL, 2, php_file_le_stream(), php_file_le_pstream);
+				stream = zend_fetch_resource(&(zcontext) TSRMLS_CC, -1, NULL, NULL, 2, php_file_le_stream(), php_file_le_pstream);
 
 				if (stream) {
 					if (stream->context == NULL) {
@@ -2407,7 +2407,7 @@ PHPAPI php_stream_context *_php_stream_context_from_zval(zval *zcontext, int nod
 		} else if (Z_TYPE_P(zcontext) == IS_ARRAY) {
 			context = php_stream_context_alloc(TSRMLS_C);
 			
-			if (SUCCESS == zend_hash_exists(Z_ARRVAL_P(params), "notification", sizeof("notification"))) {
+			if (SUCCESS == zend_hash_exists(Z_ARRVAL_P(zcontext), "notification", sizeof("notification"))) {
 				parse_context_params(context, zcontext TSRMLS_CC);
 			} else {
 				parse_context_options(context, zcontext TSRMLS_CC);
