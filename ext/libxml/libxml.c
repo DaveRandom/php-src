@@ -929,7 +929,7 @@ static PHP_FUNCTION(libxml_set_streams_context)
 		return;
 	}
 
-	PHP_STREAM_CONTEXT_FETCH(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT, context);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 0, context);
 
 	if (LIBXML(stream_context)) {
 		zval_ptr_dtor(&LIBXML(stream_context));
