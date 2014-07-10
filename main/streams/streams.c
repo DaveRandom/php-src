@@ -2330,7 +2330,7 @@ PHPAPI int php_stream_context_hydrate(php_stream_context *context, zval *zoption
 		if (Z_TYPE_P(zoptions) == IS_RESOURCE) {
 			php_stream_context *source;
 
-			source = php_stream_context_from_zval_no_default(zoptions);
+			source = php_stream_context_from_zval(zoptions, 1);
 			if (!source) {
 				return FAILURE;
 			}
@@ -2352,7 +2352,7 @@ PHPAPI int php_stream_context_hydrate(php_stream_context *context, zval *zoption
 		if (Z_TYPE_P(zparams) == IS_RESOURCE) {
 			php_stream_context *source;
 
-			source = php_stream_context_from_zval_no_default(zparams);
+			source = php_stream_context_from_zval(zparams, 1);
 			if (!source) {
 				return FAILURE;
 			}
