@@ -2407,7 +2407,7 @@ PHPAPI php_stream_context *_php_stream_context_from_zval(zval *zcontext, int nod
 		} else if (Z_TYPE_P(zcontext) == IS_ARRAY) {
 			context = php_stream_context_alloc(TSRMLS_C);
 			
-			if (SUCCESS == zend_hash_exists(Z_ARRVAL_P(zcontext), "notification", sizeof("notification"))) {
+			if (zend_hash_exists(Z_ARRVAL_P(zcontext), "notification", sizeof("notification"))) {
 				parse_context_params(context, zcontext TSRMLS_CC);
 			} else {
 				parse_context_options(context, zcontext TSRMLS_CC);
