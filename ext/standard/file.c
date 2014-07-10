@@ -543,7 +543,7 @@ PHP_FUNCTION(file_get_contents)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_or_default(zcontext);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 0, context);
 
 	stream = php_stream_open_wrapper_ex(filename, "rb",
 				(use_include_path ? USE_PATH : 0) | REPORT_ERRORS,
@@ -597,7 +597,7 @@ PHP_FUNCTION(file_put_contents)
 		php_stream_from_zval(srcstream, &data);
 	}
 
-	context = php_stream_context_from_zval(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT, context);
 
 	if (flags & PHP_FILE_APPEND) {
 		mode[0] = 'a';
@@ -750,7 +750,7 @@ PHP_FUNCTION(file)
 	include_new_line = !(flags & PHP_FILE_IGNORE_NEW_LINES);
 	skip_blank_lines = flags & PHP_FILE_SKIP_EMPTY_LINES;
 
-	context = php_stream_context_from_zval(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT, context);
 
 	stream = php_stream_open_wrapper_ex(filename, "rb", (use_include_path ? USE_PATH : 0) | REPORT_ERRORS, NULL, context);
 	if (!stream) {
@@ -880,7 +880,7 @@ PHP_NAMED_FUNCTION(php_if_fopen)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_or_default(zcontext);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 0, context);
 
 	stream = php_stream_open_wrapper_ex(filename, mode, (use_include_path ? USE_PATH : 0) | REPORT_ERRORS, NULL, context);
 
@@ -1336,7 +1336,7 @@ PHP_FUNCTION(mkdir)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_or_default(zcontext);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 0, context);
 
 	RETURN_BOOL(php_stream_mkdir(dir, mode, (recursive ? PHP_STREAM_MKDIR_RECURSIVE : 0) | REPORT_ERRORS, context));
 }
@@ -1355,7 +1355,7 @@ PHP_FUNCTION(rmdir)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_or_default(zcontext);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 0, context);
 
 	RETURN_BOOL(php_stream_rmdir(dir, REPORT_ERRORS, context));
 }
@@ -1377,7 +1377,7 @@ PHP_FUNCTION(readfile)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_or_default(zcontext);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 0, context);
 
 	stream = php_stream_open_wrapper_ex(filename, "rb", (use_include_path ? USE_PATH : 0) | REPORT_ERRORS, NULL, context);
 	if (stream) {
@@ -1467,7 +1467,7 @@ PHP_FUNCTION(rename)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_or_default(zcontext);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 0, context);
 
 	RETURN_BOOL(wrapper->wops->rename(wrapper, old_name, new_name, 0, context TSRMLS_CC));
 }
@@ -1487,7 +1487,7 @@ PHP_FUNCTION(unlink)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_or_default(zcontext);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 0, context);
 
 	wrapper = php_stream_locate_url_wrapper(filename, NULL, 0 TSRMLS_CC);
 
@@ -1627,7 +1627,7 @@ PHP_FUNCTION(copy)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_or_default(zcontext);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 0, context);
 
 	if (php_copy_file_ctx(source, target, 0, context TSRMLS_CC) == SUCCESS) {
 		RETURN_TRUE;

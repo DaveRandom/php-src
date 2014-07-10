@@ -2401,7 +2401,7 @@ PHPAPI php_stream_context *_php_stream_context_from_zval(zval *zcontext, int nod
 
 					context = stream->context;
 				} else {
-					php_error_docref(NULL TSRMLS_CC, E_NOTICE, "unable to fetch stream context from unknown resource type");
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "unable to fetch stream context from unknown resource type");
 				}
 			}
 		} else if (Z_TYPE_P(zcontext) == IS_ARRAY) {
@@ -2413,7 +2413,7 @@ PHPAPI php_stream_context *_php_stream_context_from_zval(zval *zcontext, int nod
 				parse_context_options(context, zcontext TSRMLS_CC);
 			}
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "stream context must be a resource or an array");
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "stream context must be a resource or an array");
 		}
 	} else {
 		if (!nodefault) {
