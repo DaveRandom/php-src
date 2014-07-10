@@ -30,9 +30,12 @@ typedef void (*php_stream_notification_func)(php_stream_context *context,
 #define PHP_STREAM_NOTIFIER_PROGRESS	1
 
 #define php_stream_context_from_zval(zcontext, nodefault) _php_stream_context_from_zval(zcontext, nodefault TSRMLS_CC)
-#define php_stream_context_from_zval_or_default(zcontext) _php_stream_context_from_zval(zcontext, 0 TSRMLS_CC)
-#define php_stream_context_from_zval_no_default(zcontext) _php_stream_context_from_zval(zcontext, 1 TSRMLS_CC)
 #define php_stream_context_to_zval(context, zval) { ZVAL_RESOURCE(zval, (context)->rsrc_id); zend_list_addref((context)->rsrc_id); }
+#define PHP_STREAM_CONTEXT_FETCH(zcontext, nodefault, context)               \
+		context = php_stream_context_from_zval(zcontext, nodefault); \
+		if (zcontext && !context) {                                  \
+			RETURN_NULL;                                         \
+		}
 
 typedef struct _php_stream_notifier php_stream_notifier;
 

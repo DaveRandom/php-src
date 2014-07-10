@@ -223,7 +223,7 @@ static void _php_do_opendir(INTERNAL_FUNCTION_PARAMETERS, int createobject)
 		RETURN_NULL();
 	}
 
-	context = php_stream_context_from_zval_or_default(zcontext);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 0, context);
 	
 	dirp = php_stream_opendir(dirname, REPORT_ERRORS, context);
 
@@ -568,7 +568,7 @@ PHP_FUNCTION(scandir)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_no_default(zcontext);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 1, context);
 
 	if (flags == PHP_SCANDIR_SORT_ASCENDING) {
 		n = php_stream_scandir(dirn, &namelist, context, (void *) php_stream_dirent_alphasort);
