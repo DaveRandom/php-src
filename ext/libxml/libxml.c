@@ -922,17 +922,21 @@ static PHP_MINFO_FUNCTION(libxml)
    Set the streams context for the next libxml document load or write */
 static PHP_FUNCTION(libxml_set_streams_context)
 {
-	zval *arg;
+	zval *zcontext;
+	php_stream_context *context;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &arg) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zcontext) == FAILURE) {
 		return;
 	}
+
+	PHP_STREAM_CONTEXT_FETCH(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT, context);
+
 	if (LIBXML(stream_context)) {
 		zval_ptr_dtor(&LIBXML(stream_context));
 		LIBXML(stream_context) = NULL;
 	}
 
-	php_stream_context_to_zval(php_stream_context_from_zval_no_default(arg), LIBXML(stream_context));
+	php_stream_context_to_zval(context, LIBXML(stream_context));
 }
 /* }}} */
 
