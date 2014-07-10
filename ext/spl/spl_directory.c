@@ -524,6 +524,7 @@ static spl_filesystem_object * spl_filesystem_object_create_type(int ht, spl_fil
 			zval_ptr_dtor(&arg2);
 		} else {
 			zval *zcontext;
+			php_stream_context *context;
 
 			intern->file_name = source->file_name;
 			intern->file_name_len = source->file_name_len;
@@ -544,7 +545,8 @@ static spl_filesystem_object * spl_filesystem_object_create_type(int ht, spl_fil
 				return NULL;
 			}
 
-			php_stream_context_to_zval(php_stream_context_from_zval_no_default(zcontext), intern->u.file.zcontext);
+			PHP_STREAM_CONTEXT_FETCH(zcontext, 1, context);
+			php_stream_context_to_zval(context, intern->u.file.zcontext);
 
 			if (spl_filesystem_file_open(intern, use_include_path, 0 TSRMLS_CC) == FAILURE) {
 				zend_restore_error_handling(&error_handling TSRMLS_CC);
