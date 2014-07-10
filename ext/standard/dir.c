@@ -219,11 +219,11 @@ static void _php_do_opendir(INTERNAL_FUNCTION_PARAMETERS, int createobject)
 	php_stream_context *context = NULL;
 	php_stream *dirp;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|r", &dirname, &dir_len, &zcontext) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z", &dirname, &dir_len, &zcontext) == FAILURE) {
 		RETURN_NULL();
 	}
 
-	context = php_stream_context_from_zval(zcontext, 0);
+	context = php_stream_context_from_zval_or_default(zcontext);
 	
 	dirp = php_stream_opendir(dirname, REPORT_ERRORS, context);
 
@@ -559,7 +559,7 @@ PHP_FUNCTION(scandir)
 	zval *zcontext = NULL;
 	php_stream_context *context = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|lr", &dirn, &dirn_len, &flags, &zcontext) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|lz", &dirn, &dirn_len, &flags, &zcontext) == FAILURE) {
 		return;
 	}
 
@@ -568,9 +568,7 @@ PHP_FUNCTION(scandir)
 		RETURN_FALSE;
 	}
 
-	if (zcontext) {
-		context = php_stream_context_from_zval(zcontext, 0);
-	}
+	context = php_stream_context_from_zval_no_default(zcontext, 0);
 
 	if (flags == PHP_SCANDIR_SORT_ASCENDING) {
 		n = php_stream_scandir(dirn, &namelist, context, (void *) php_stream_dirent_alphasort);
