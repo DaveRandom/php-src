@@ -107,7 +107,7 @@ PHP_FUNCTION(stream_socket_client)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT, context);
 
 	if (flags & PHP_STREAM_CLIENT_PERSISTENT) {
 		spprintf(&hashkey, 0, "stream_socket_client__%s", host);
@@ -192,7 +192,7 @@ PHP_FUNCTION(stream_socket_server)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT, context);
 
 	if (context) {
 		zend_list_addref(context->rsrc_id);
@@ -876,7 +876,7 @@ PHP_FUNCTION(stream_context_get_options)
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zcontext) == FAILURE) {
 		RETURN_FALSE;
 	}
-	context = php_stream_context_from_zval_no_default(zcontext);
+	context = php_stream_context_from_zval(zcontext, 1);
 	if (!context) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid stream/context parameter");
 		RETURN_FALSE;
@@ -906,7 +906,7 @@ PHP_FUNCTION(stream_context_set_option)
 	}
 
 	/* figure out where the context is coming from exactly */
-	context = php_stream_context_from_zval_no_default(zcontext);
+	context = php_stream_context_from_zval(zcontext, 1);
 	if (!context) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid stream/context parameter");
 		RETURN_FALSE;
@@ -933,7 +933,7 @@ PHP_FUNCTION(stream_context_set_params)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_no_default(zcontext);
+	context = php_stream_context_from_zval(zcontext, 1);
 	if (!context) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid stream/context parameter");
 		RETURN_FALSE;
@@ -954,7 +954,7 @@ PHP_FUNCTION(stream_context_get_params)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_no_default(zcontext);
+	context = php_stream_context_from_zval(zcontext, 1);
 	if (!context) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid stream/context parameter");
 		RETURN_FALSE;
