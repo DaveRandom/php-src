@@ -34,7 +34,7 @@ typedef void (*php_stream_notification_func)(php_stream_context *context,
 #define PHP_STREAM_CONTEXT_FETCH(zcontext, nodefault, context)               \
 		context = php_stream_context_from_zval(zcontext, nodefault); \
 		if (zcontext && !context) {                                  \
-			RETURN_NULL;                                         \
+			RETURN_NULL();                                         \
 		}
 
 typedef struct _php_stream_notifier php_stream_notifier;
