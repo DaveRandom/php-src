@@ -568,7 +568,7 @@ PHP_FUNCTION(scandir)
 		RETURN_FALSE;
 	}
 
-	context = php_stream_context_from_zval_no_default(zcontext, 0);
+	context = php_stream_context_from_zval_no_default(zcontext);
 
 	if (flags == PHP_SCANDIR_SORT_ASCENDING) {
 		n = php_stream_scandir(dirn, &namelist, context, (void *) php_stream_dirent_alphasort);
