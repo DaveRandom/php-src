@@ -978,7 +978,7 @@ PHP_FUNCTION(stream_context_get_default)
 	zval *options = NULL;
 	php_stream_context *context;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a", &options) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z", &options) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -1002,7 +1002,7 @@ PHP_FUNCTION(stream_context_set_default)
 	zval *options = NULL;
 	php_stream_context *context;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a", &options) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &options) == FAILURE) {
 		return;
 	}
 
@@ -1024,7 +1024,7 @@ PHP_FUNCTION(stream_context_create)
 	zval *options = NULL, *params = NULL;
 	php_stream_context *context;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a!a!", &options, &params) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z!z!", &options, &params) == FAILURE) {
 		RETURN_FALSE;
 	}
 
