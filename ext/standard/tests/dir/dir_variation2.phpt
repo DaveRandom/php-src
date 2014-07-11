@@ -52,41 +52,33 @@ $unexpected_values = array (
        12.3456789000E-10,
        .5,
 
-       // array data
-/*10*/ array(),
-       array(0),
-       array(1),
-       array(1, 2),
-       array('color' => 'red', 'item' => 'pen'),
-
-
        // null data
-/*15*/ NULL,
+/*10*/ NULL,
        null,
 
        // boolean data
-/*17*/ true,
+/*12*/ true,
        false,
        TRUE,
        FALSE,
 
        // empty data
-/*21*/ "",
+/*16*/ "",
        '',
 
        // string data
-/*23*/ "string",
+/*18*/ "string",
        'string',
        $heredoc,
 
        // object data
-/*26*/ new classA(),
+/*21*/ new classA(),
 
        // undefined data
-/*27*/ @$undefined_var,
+/*22*/ @$undefined_var,
 
        // unset data
-/*28*/ @$unset_var
+/*23*/ @$unset_var
 );
 
 // loop through various elements of $unexpected_values to check the behavior of dir()
@@ -110,114 +102,94 @@ rmdir($directory);
 *** Testing dir() : unexpected values for $context argument ***
 
 -- Iteration 1 --
-Warning: dir() expects parameter 2 to be resource, integer given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 2 --
-Warning: dir() expects parameter 2 to be resource, integer given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 3 --
-Warning: dir() expects parameter 2 to be resource, integer given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 4 --
-Warning: dir() expects parameter 2 to be resource, integer given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 5 --
-Warning: dir() expects parameter 2 to be resource, double given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 6 --
-Warning: dir() expects parameter 2 to be resource, double given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 7 --
-Warning: dir() expects parameter 2 to be resource, double given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 8 --
-Warning: dir() expects parameter 2 to be resource, double given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 9 --
-Warning: dir() expects parameter 2 to be resource, double given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 10 --
-Warning: dir() expects parameter 2 to be resource, array given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 11 --
-Warning: dir() expects parameter 2 to be resource, array given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 12 --
-Warning: dir() expects parameter 2 to be resource, array given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 13 --
-Warning: dir() expects parameter 2 to be resource, array given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 14 --
-Warning: dir() expects parameter 2 to be resource, array given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 15 --
-Warning: dir() expects parameter 2 to be resource, null given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 16 --
-Warning: dir() expects parameter 2 to be resource, null given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 17 --
-Warning: dir() expects parameter 2 to be resource, boolean given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 18 --
-Warning: dir() expects parameter 2 to be resource, boolean given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 19 --
-Warning: dir() expects parameter 2 to be resource, boolean given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 20 --
-Warning: dir() expects parameter 2 to be resource, boolean given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 21 --
-Warning: dir() expects parameter 2 to be resource, string given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 22 --
-Warning: dir() expects parameter 2 to be resource, string given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 
 -- Iteration 23 --
-Warning: dir() expects parameter 2 to be resource, string given in %s on line %d
-NULL
-
--- Iteration 24 --
-Warning: dir() expects parameter 2 to be resource, string given in %s on line %d
-NULL
-
--- Iteration 25 --
-Warning: dir() expects parameter 2 to be resource, string given in %s on line %d
-NULL
-
--- Iteration 26 --
-Warning: dir() expects parameter 2 to be resource, object given in %s on line %d
-NULL
-
--- Iteration 27 --
-Warning: dir() expects parameter 2 to be resource, null given in %s on line %d
-NULL
-
--- Iteration 28 --
-Warning: dir() expects parameter 2 to be resource, null given in %s on line %d
+Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
 Done
