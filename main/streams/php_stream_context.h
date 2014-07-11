@@ -32,7 +32,7 @@ typedef void (*php_stream_notification_func)(php_stream_context *context,
 #define php_stream_context_from_zval(zcontext, nodefault) _php_stream_context_from_zval(zcontext, nodefault TSRMLS_CC)
 #define php_stream_context_to_zval(context, zval) { ZVAL_RESOURCE(zval, (context)->rsrc_id); zend_list_addref((context)->rsrc_id); }
 #define PHP_STREAM_CONTEXT_FETCH(zcontext, nodefault, context)                                                        \
-		if (zcontext && !IS_RESOURCE(zcontext) && !IS_ARRAY(zcontext)) {                                      \
+		if (zcontext && Z_TYPE_P(zcontext) != IS_RESOURCE && Z_TYPE_P(zcontext) != IS_ARRAY) {                \
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "stream context must be a resource or an array"); \
 			RETURN_NULL();                                                                                \
 		}                                                                                                     \
