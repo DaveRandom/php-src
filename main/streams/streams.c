@@ -2231,7 +2231,7 @@ static int parse_context_options(php_stream_context *context, zval *options TSRM
 			}
 
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "options array should have the form [\"wrappername\"][\"optionname\"] = $value");
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "context options array should have the form [\"wrappername\"][\"optionname\"] = $value");
 		}
 		zend_hash_move_forward_ex(Z_ARRVAL_P(options), &pos);
 	}
@@ -2339,7 +2339,7 @@ PHPAPI int php_stream_context_hydrate(php_stream_context *context, zval *zoption
 		}
 
 		if (Z_TYPE_P(zoptions) != IS_ARRAY) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "options must be an associative array");
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "context options must be an associative array");
 			return FAILURE;
 		}
 
@@ -2360,7 +2360,7 @@ PHPAPI int php_stream_context_hydrate(php_stream_context *context, zval *zoption
 			assign_context_notifier(context, source->notifier->ptr);
 		} else {
 			if (Z_TYPE_P(zparams) != IS_ARRAY) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "params must be an associative array");
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "context params must be an associative array");
 			}
 
 			if (parse_context_params(context, zparams TSRMLS_CC) != SUCCESS) {
