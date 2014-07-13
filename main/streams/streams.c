@@ -2207,6 +2207,20 @@ static void user_space_stream_notifier_dtor(php_stream_notifier *notifier)
 	}
 }
 
+static int assign_context_notifier(php_stream_context *context, void *ptr)
+{
+	if (context->notifier) {
+		php_stream_notification_free(context->notifier);
+		context->notifier = NULL;
+	}
+
+	context->notifier = php_stream_notification_alloc();
+	context->notifier->func = user_space_stream_notifier;
+	context->notifier->ptr = ptr;
+	Z_ADDREF_P(ptr);
+	context->notifier->dtor = user_space_stream_notifier_dtor;
+}
+
 static int parse_context_options(php_stream_context *context, zval *options TSRMLS_DC)
 {
 	HashPosition pos, opos;
@@ -2232,6 +2246,8 @@ static int parse_context_options(php_stream_context *context, zval *options TSRM
 
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "context options array should have the form [\"wrappername\"][\"optionname\"] = $value");
+			ret = FAILURE;
+			break;
 		}
 		zend_hash_move_forward_ex(Z_ARRVAL_P(options), &pos);
 	}
@@ -2239,23 +2255,8 @@ static int parse_context_options(php_stream_context *context, zval *options TSRM
 	return ret;
 }
 
-static int assign_context_notifier(php_stream_context *context, void *ptr)
-{
-	if (context->notifier) {
-		php_stream_notification_free(context->notifier);
-		context->notifier = NULL;
-	}
-
-	context->notifier = php_stream_notification_alloc();
-	context->notifier->func = user_space_stream_notifier;
-	context->notifier->ptr = ptr;
-	Z_ADDREF_P(ptr);
-	context->notifier->dtor = user_space_stream_notifier_dtor;
-}
-
 static int parse_context_params(php_stream_context *context, zval *params TSRMLS_DC)
 {
-	int ret = SUCCESS;
 	zval **tmp;
 
 	if (SUCCESS == zend_hash_find(Z_ARRVAL_P(params), "notification", sizeof("notification"), (void**)&tmp)) {
@@ -2263,14 +2264,15 @@ static int parse_context_params(php_stream_context *context, zval *params TSRMLS
 	}
 
 	if (SUCCESS == zend_hash_find(Z_ARRVAL_P(params), "options", sizeof("options"), (void**)&tmp)) {
-		if (Z_TYPE_PP(tmp) == IS_ARRAY) {
-			parse_context_options(context, *tmp TSRMLS_CC);
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid stream/context parameter");
+		if (Z_TYPE_PP(tmp) != IS_ARRAY) {
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "\"options\" context parameter must be an array of context options");
+			return FAILURE;
 		}
+
+		return parse_context_options(context, *tmp TSRMLS_CC);
 	}
 
-	return ret;
+	return SUCCESS;
 }
 
 /* {{{ context API */
@@ -2339,7 +2341,7 @@ PHPAPI int php_stream_context_hydrate(php_stream_context *context, zval *zoption
 		}
 
 		if (Z_TYPE_P(zoptions) != IS_ARRAY) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "context options must be an associative array");
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "context options must be a resource or an associative array");
 			return FAILURE;
 		}
 
@@ -2360,7 +2362,7 @@ PHPAPI int php_stream_context_hydrate(php_stream_context *context, zval *zoption
 			assign_context_notifier(context, source->notifier->ptr);
 		} else {
 			if (Z_TYPE_P(zparams) != IS_ARRAY) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "context params must be an associative array");
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "context params must be a resource or an associative array");
 			}
 
 			if (parse_context_params(context, zparams TSRMLS_CC) != SUCCESS) {
