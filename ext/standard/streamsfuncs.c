@@ -863,23 +863,38 @@ PHP_FUNCTION(stream_select)
 }
 /* }}} */
 
-/* {{{ proto array stream_context_get_options(resource context|resource stream)
+/* {{{ proto array stream_context_get_options(resource context|resource stream[, string wrappername[, string optionname]])
    Retrieve options for a stream/wrapper/context */
 PHP_FUNCTION(stream_context_get_options)
 {
-	zval *zcontext;
+	zval *zcontext, **tmp;
+	char *wrappername, *optionname;
+	int wrapperlen, optionlen;
 	php_stream_context *context;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zcontext) == FAILURE) {
-		RETURN_FALSE;
-	}
-	context = php_stream_context_from_zval(zcontext, 1);
-	if (!context) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid stream/context parameter");
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|ss", &zcontext, &wrappername, &wrapperlen, &optionname, &optionlen) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	RETURN_ZVAL(context->options, 1, 0);
+	PHP_STREAM_CONTEXT_FETCH(zcontext, 1, context)
+
+	if (!wrapperlen) {
+		RETURN_ZVAL(context->options, 1, 0);
+	}
+
+	if (FAILURE == zend_hash_find(Z_ARRVAL_P(context->options), wrappername, wrapperlen, (void**)&tmp)) {
+		RETURN_NULL();
+	}
+
+	if (!optionlen) {
+		RETURN_ZVAL(*tmp, 1, 0);
+	}
+
+	if (FAILURE == zend_hash_find(Z_ARRVAL_P(*tmp), optionname, optionlen, (void**)&tmp)) {
+		RETURN_NULL();
+	}
+
+	RETURN_ZVAL(*tmp, 1, 0);
 }
 /* }}} */
 
