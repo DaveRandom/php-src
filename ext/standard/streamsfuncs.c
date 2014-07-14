@@ -882,7 +882,7 @@ PHP_FUNCTION(stream_context_get_options)
 		RETURN_ZVAL(context->options, 1, 0);
 	}
 
-	if (FAILURE == zend_hash_find(Z_ARRVAL_P(context->options), wrappername, wrapperlen, (void**)&tmp)) {
+	if (FAILURE == zend_hash_find(Z_ARRVAL_P(context->options), wrappername, wrapperlen + 1, (void**)&tmp)) {
 		RETURN_NULL();
 	}
 
@@ -890,7 +890,7 @@ PHP_FUNCTION(stream_context_get_options)
 		RETURN_ZVAL(*tmp, 1, 0);
 	}
 
-	if (FAILURE == zend_hash_find(Z_ARRVAL_P(*tmp), optionname, optionlen, (void**)&tmp)) {
+	if (FAILURE == zend_hash_find(Z_ARRVAL_P(*tmp), optionname, optionlen + 1, (void**)&tmp)) {
 		RETURN_NULL();
 	}
 
