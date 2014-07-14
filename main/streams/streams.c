@@ -2381,43 +2381,10 @@ PHPAPI int php_stream_context_hydrate(php_stream_context *context, zval *zoption
  */
 PHPAPI php_stream_context *_php_stream_context_from_zval(zval *zcontext, int nodefault TSRMLS_DC)
 {
-	php_stream_context *context;
+	php_stream_context *context = NULL;
 
-	if (zcontext) {
-		if (Z_TYPE_P(zcontext) == IS_RESOURCE) {
-			context = zend_fetch_resource(&(zcontext) TSRMLS_CC, -1, NULL, NULL, 1, php_le_stream_context(TSRMLS_C));
-
-			if (!context) {
-				php_stream *stream;
-
-				stream = zend_fetch_resource(&(zcontext) TSRMLS_CC, -1, NULL, NULL, 2, php_file_le_stream(), php_file_le_pstream);
-
-				if (stream) {
-					if (stream->context == NULL) {
-						/* Only way this happens is if stream is opened with NO_DEFAULT_CONTEXT
-						   param, but then something is called which requires a context.
-						   Don't give them the default one though since they already said they
-						   didn't want it. */
-						stream->context = php_stream_context_alloc(TSRMLS_C);
-					}
-
-					context = stream->context;
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "unable to fetch stream context from unknown resource type");
-				}
-			}
-		} else if (Z_TYPE_P(zcontext) == IS_ARRAY) {
-			context = php_stream_context_alloc(TSRMLS_C);
-			
-			if (zend_hash_exists(Z_ARRVAL_P(zcontext), "notification", sizeof("notification"))) {
-				parse_context_params(context, zcontext TSRMLS_CC);
-			} else {
-				parse_context_options(context, zcontext TSRMLS_CC);
-			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "stream context must be a resource or an array");
-		}
-	} else {
+	/* No context specified, get the default */
+	if (zcontext == NULL || Z_TYPE_P(zcontext) == IS_NULL) {
 		if (!nodefault) {
 			if (!FG(default_context)) {
 				/* Allocate the default context now */
@@ -2426,9 +2393,52 @@ PHPAPI php_stream_context *_php_stream_context_from_zval(zval *zcontext, int nod
 
 			context = FG(default_context);
 		}
+
+		return context;
 	}
 
-	return context;
+	/* Fetch a context from a stream or stream context resource */
+	if (Z_TYPE_P(zcontext) == IS_RESOURCE) {
+		context = zend_fetch_resource(&(zcontext) TSRMLS_CC, -1, NULL, NULL, 1, php_le_stream_context(TSRMLS_C));
+
+		if (!context) {
+			php_stream *stream;
+
+			stream = zend_fetch_resource(&(zcontext) TSRMLS_CC, -1, NULL, NULL, 2, php_file_le_stream(), php_file_le_pstream);
+
+			if (stream) {
+				if (stream->context == NULL) {
+					/* Only way this happens is if stream is opened with NO_DEFAULT_CONTEXT
+					   param, but then something is called which requires a context.
+					   Don't give them the default one though since they already said they
+					   didn't want it. */
+					stream->context = php_stream_context_alloc(TSRMLS_C);
+				}
+
+				context = stream->context;
+			} else {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "unable to fetch stream context from unknown resource type");
+			}
+		}
+
+		return context;
+	}
+
+	/* Create a context from an array */
+	if (Z_TYPE_P(zcontext) == IS_ARRAY) {
+		context = php_stream_context_alloc(TSRMLS_C);
+
+		if (zend_hash_exists(Z_ARRVAL_P(zcontext), "notification", sizeof("notification"))) {
+			parse_context_params(context, zcontext TSRMLS_CC);
+		} else {
+			parse_context_options(context, zcontext TSRMLS_CC);
+		}
+
+		return context;
+	}
+
+	php_error_docref(NULL TSRMLS_CC, E_WARNING, "stream context must be a resource or an array");
+	return NULL;
 }
 
 PHPAPI php_stream_notifier *php_stream_notification_alloc(void)
