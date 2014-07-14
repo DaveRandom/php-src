@@ -58,6 +58,7 @@ PHPAPI void php_stream_context_free(php_stream_context *context);
 PHPAPI php_stream_context *php_stream_context_alloc(TSRMLS_D);
 PHPAPI int php_stream_context_hydrate(php_stream_context *context, zval *options, zval *params TSRMLS_DC);
 PHPAPI php_stream_context *_php_stream_context_from_zval(zval *zcontext, int nodefault TSRMLS_DC);
+PHPAPI zend_bool php_stream_context_has_user_space_notifier(php_stream_context *context);
 PHPAPI int php_stream_context_get_option(php_stream_context *context,
 		const char *wrappername, const char *optionname, zval ***optionvalue);
 PHPAPI int php_stream_context_set_option(php_stream_context *context,

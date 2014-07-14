@@ -2160,7 +2160,7 @@ PHPAPI php_stream *_php_stream_open_wrapper_ex(const char *path, const char *mod
 }
 /* }}} */
 
-void user_space_stream_notifier(php_stream_context *context, int notifycode, int severity,
+static void user_space_stream_notifier(php_stream_context *context, int notifycode, int severity,
 		char *xmsg, int xcode, size_t bytes_sofar, size_t bytes_max, void * ptr TSRMLS_DC)
 {
 	zval *callback = (zval*)context->notifier->ptr;
@@ -2442,6 +2442,11 @@ PHPAPI void php_stream_notification_free(php_stream_notifier *notifier)
 		notifier->dtor(notifier);
 	}
 	efree(notifier);
+}
+
+PHPAPI zend_bool php_stream_context_has_user_space_notifier(php_stream_context *context)
+{
+	return context->notifier && context->notifier->ptr && context->notifier->func == user_space_stream_notifier;
 }
 
 PHPAPI int php_stream_context_get_option(php_stream_context *context,
