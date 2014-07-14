@@ -42,9 +42,6 @@ typedef unsigned __int64 php_timeout_ull;
 
 #define GET_CTX_OPT(stream, wrapper, name, val) (stream->context && SUCCESS == php_stream_context_get_option(stream->context, wrapper, name, &val))
 
-void user_space_stream_notifier(php_stream_context *context, int notifycode, int severity,
-		char *xmsg, int xcode, size_t bytes_sofar, size_t bytes_max, void * ptr TSRMLS_DC);
-
 /* Streams based network functions */
 
 #if HAVE_SOCKETPAIR
@@ -961,7 +958,7 @@ PHP_FUNCTION(stream_context_get_params)
 	}
 
 	array_init(return_value);
-	if (context->notifier && context->notifier->ptr && context->notifier->func == user_space_stream_notifier) {
+	if (php_stream_context_has_user_space_notifier(context)) {
 		add_assoc_zval_ex(return_value, ZEND_STRS("notification"), context->notifier->ptr);
 		Z_ADDREF_P(context->notifier->ptr);
 	}
