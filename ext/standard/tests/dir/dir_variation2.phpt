@@ -30,14 +30,13 @@ $unexpected_values = array(
 );
 
 // loop through various elements of $unexpected_values to check the behavior of dir()
-foreach( $unexpected_values as $it => $value ) {
-  echo "\n-- Iteration $it --";
-  var_dump( dir($directory, $value) );
+foreach ($unexpected_values as $it => $value) {
+    echo "\n-- Iteration $it --";
+    var_dump(dir($directory, $value));
 }
 
-echo "Done";
-
 ?>
+===DONE===
 --CLEAN--
 <?php
 
@@ -67,4 +66,4 @@ NULL
 -- Iteration 5 --
 Warning: dir(): stream context must be a resource or an array in %s on line %d
 NULL
-Done
+===DONE===
