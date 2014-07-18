@@ -21,16 +21,16 @@ $directory = __DIR__ . "/scandir_variation3";
 mkdir($directory);
 
 // unexpected values to be passed to $context argument
-$unexpected_values = array(
+$values = [
     1 => 1,            // int
     2 => 1.5,          // float
     3 => true,         // bool
     4 => 'string',     // string
     5 => new stdClass, // object
-);
+];
 
-// loop through each element of $unexpected_values to check the behavior of scandir()
-foreach ($unexpected_values as $it => $value) {
+// loop through each element of $values to check the behavior of scandir()
+foreach ($values as $it => $value) {
     echo "\n-- Iteration $it --";
     var_dump(scandir($directory, SCANDIR_SORT_ASCENDING, $value));
 };

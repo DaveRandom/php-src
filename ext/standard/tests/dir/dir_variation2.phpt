@@ -21,16 +21,16 @@ $directory = __DIR__ . "/dir_variation2";
 mkdir($directory);
 
 // unexpected values to be passed to $context argument
-$unexpected_values = array(
+$values = [
     1 => 1,            // int
     2 => 1.5,          // float
     3 => true,         // bool
     4 => 'string',     // string
     5 => new stdClass, // object
-);
+];
 
-// loop through various elements of $unexpected_values to check the behavior of dir()
-foreach ($unexpected_values as $it => $value) {
+// loop through each element of $values to check the behavior of dir()
+foreach ($values as $it => $value) {
     echo "\n-- Iteration $it --";
     var_dump(dir($directory, $value));
 }
