@@ -2304,7 +2304,7 @@ Convenience method to output as html
 */
 PHP_FUNCTION(dom_document_save_html)
 {
-	zval *id, *nodep = NULL;
+	zval *id, *nodep = NULL, *listp = NULL;
 	xmlDoc *docp;
 	xmlNode *node;
 	xmlBufferPtr buf;
@@ -2313,10 +2313,16 @@ PHP_FUNCTION(dom_document_save_html)
 	int size = 0, format;
 	dom_doc_propsptr doc_props;
 
-	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
+	if (zend_parse_method_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
 		"O|O!", &id, dom_document_class_entry, &nodep, dom_node_class_entry)
 		== FAILURE) {
-		return;
+		if (zend_parse_method_parameters(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
+			"O|O!", &id, dom_document_class_entry, &listp, dom_nodelist_class_entry)
+			== FAILURE) {
+			/* TODO */
+			php_error_docref(NULL TSRMLS_CC, E_RECOVERABLE_ERROR, "Argument 1 must be an instance of %s or %s, ");
+			return;
+		}
 	}
 
 	DOM_GET_OBJ(docp, id, xmlDocPtr, intern);
@@ -2366,6 +2372,8 @@ PHP_FUNCTION(dom_document_save_html)
 			RETVAL_FALSE;
 		}
 		xmlBufferFree(buf);
+	} else if (listp != NULL) {
+		/* Dump contents of NodeList */
 	} else {
 #if LIBXML_VERSION >= 20623
 		htmlDocDumpMemoryFormat(docp, &mem, &size, format);
