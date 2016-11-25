@@ -1511,6 +1511,13 @@ int php_openssl_setup_crypto(php_stream *stream,
 		return FAILURE;
 	}
 
+	if (GET_VER_OPT("signature_algorithms")) {
+		convert_to_string_ex(val);
+		SSL_CTX_set1_sigalgs(sslsock->ctx, Z_STRVAL_PP(val));
+	} else {
+		SSL_CTX_set1_sigalgs(sslsock->ctx, OPENSSL_DEFAULT_SIGNATURE_ALGORITHMS);
+	}
+	
 	/* callback for the passphrase (for localcert) */
 	if (GET_VER_OPT("passphrase")) {
 		SSL_CTX_set_default_passwd_cb_userdata(sslsock->ctx, stream);
