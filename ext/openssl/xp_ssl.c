@@ -1498,6 +1498,7 @@ int php_openssl_setup_crypto(php_stream *stream,
 	int method_flags;
 	char *cipherlist = NULL;
 	char *alpn_protocols = NULL;
+	char *sigalgos = OPENSSL_DEFAULT_SIGNATURE_ALGORITHMS;
 	zval *val;
 
 	if (sslsock->ssl_handle) {
@@ -1562,6 +1563,18 @@ int php_openssl_setup_crypto(php_stream *stream,
 	if (GET_VER_OPT("verify_peer") && !zend_is_true(val)) {
 		disable_peer_verification(sslsock->ctx, stream);
 	} else if (FAILURE == enable_peer_verification(sslsock->ctx, stream)) {
+		return FAILURE;
+	}
+
+	if (GET_VER_OPT("signature_algorithms")) {
+		convert_to_string_ex(val);
+		sigalgos = Z_STRVAL_P(val);
+	}
+
+	if (!SSL_CTX_set1_sigalgs_list(sslsock->ctx, sigalgos)) {
+		php_error_docref(NULL, E_WARNING, "Failed setting acceptable certificate signature algorithms");
+		SSL_CTX_free(sslsock->ctx);
+		sslsock->ctx = NULL;
 		return FAILURE;
 	}
 
