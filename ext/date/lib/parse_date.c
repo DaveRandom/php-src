@@ -25173,6 +25173,7 @@ timelib_time *timelib_parse_from_format(char *format, char *string, size_t len, 
 				}
 				break;
 			case 'u': /* up to six digit microsecond */
+			case 'f': /* fraction of a second */
 				{
 					double f;
 					char *tptr;
@@ -25182,7 +25183,9 @@ timelib_time *timelib_parse_from_format(char *format, char *string, size_t len, 
 					if ((f = timelib_get_nr((char **) &ptr, 6)) == TIMELIB_UNSET || (ptr - tptr < 1)) {
 						add_pbf_error(s, TIMELIB_ERR_NO_SIX_DIGIT_MICROSECOND, "A six digit microsecond could not be found", string, begin);
 					} else {
-						s->time->us = (f * pow(10, 6 - (ptr - tptr)));
+						s->time->us = *fptr == 'f'
+							? (f * pow(10, 6 - (ptr - tptr)))
+							: f;
 					}
 				}
 				break;
