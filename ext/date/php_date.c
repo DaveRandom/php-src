@@ -1,3 +1,6 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "bugprone-sizeof-expression"
+#pragma clang diagnostic ignored "-Wsign-conversion"
 /*
    +----------------------------------------------------------------------+
    | PHP Version 7                                                        |
@@ -586,6 +589,41 @@ PHP_INI_BEGIN()
 PHP_INI_END()
 /* }}} */
 
+#define DATE_OBJ_DO_OPERATION_FN(class_name) _ ## class_name ## _do_operation
+#define DATE_OBJ_DO_OPERATION_FUNCTION(class_name) static int DATE_OBJ_DO_OPERATION_FN(class_name)(zend_uchar opcode, zval *result, zval *op1, zval *op2)
+
+#define DATE_OBJ_OP_HANDLER_FN(class_name, op) _ ## class_name ## _op_handler_ ## op
+#define DATE_OBJ_OP_HANDLER_FUNCTION(class_name, op) static int DATE_OBJ_OP_HANDLER_FN(class_name, op)(zend_uchar opcode, zval *result, zval *op1, zval *op2, zend_bool assign)
+typedef int (*date_obj_op_handler_t)(zend_uchar opcode, zval *result, zval *op1, zval *op2, zend_bool assign);
+
+#define DATE_OBJ_OP_HANDLERS_BEGIN(class_name) DATE_OBJ_DO_OPERATION_FUNCTION(class_name) \
+{                                                                                         \
+	date_obj_op_handler_t handler;                                                        \
+	zval tmp;                                                                             \
+	int rescode;                                                                          \
+	switch (opcode) {
+
+#define DATE_OBJ_OP_HANDLER(class_name, op)                                               \
+		case op:                                                                          \
+			handler = DATE_OBJ_OP_HANDLER_FN(class_name, op);                             \
+			break;
+#define DATE_OBJ_OP_ALIAS(class_name, alias_op, impl_op)                                  \
+		case alias_op:                                                                    \
+			handler = DATE_OBJ_OP_HANDLER_FN(class_name, impl_op);                        \
+			break;
+#define DATE_OBJ_OP_HANDLERS_END()                                                        \
+		default:                                                                          \
+			return FAILURE;                                                               \
+    }                                                                                     \
+	if (EXPECTED(result != op1)) {                                                        \
+		return handler(opcode, result, op1, op2, 0);                                      \
+	}                                                                                     \
+	ZVAL_COPY_VALUE(&tmp, op1);                                                           \
+	rescode = handler(opcode, result, &tmp, op2, 1);                                      \
+	zval_dtor(&tmp);                                                                      \
+	return rescode;                                                                       \
+}
+
 zend_class_entry *date_ce_date, *date_ce_timezone, *date_ce_interval, *date_ce_period;
 zend_class_entry *date_ce_immutable, *date_ce_interface;
 
@@ -644,11 +682,25 @@ static zend_object_handlers date_object_handlers_period;
 	}	\
 	obj = Z_PHPDATE_P(object);	\
 
+static zend_always_inline int date_object_is_initialized(const int initialized, const char *class_name)
+{
+	if (EXPECTED(initialized)) return 1;
+	php_error_docref(NULL, E_WARNING, "The %s object has not been correctly initialized by its constructor", class_name);
+	return 0;
+}
 #define DATE_CHECK_INITIALIZED(member, class_name) \
-	if (!(member)) { \
-		php_error_docref(NULL, E_WARNING, "The " #class_name " object has not been correctly initialized by its constructor"); \
+	if (!date_object_is_initialized(!!(member), #class_name)) { \
 		RETURN_FALSE; \
 	}
+
+#define DATE_IS_INSTANCE(zv, ce) (Z_TYPE_P(zv) == IS_OBJECT && Z_OBJCE_P(zv) == date_ce_ ## ce)
+#define DATE_VALID_VALUE(value, dest, member_name, class_name) date_object_is_initialized(((dest) = (value)) && (dest)->member_name, #class_name)
+#define DATE_VALID_DATE(zv, dest, class_name) DATE_VALID_VALUE(Z_PHPDATE_P(zv), dest, time, class_name)
+#define DATE_VALID_INTERVAL(zv, dest) DATE_VALID_VALUE(Z_PHPINTERVAL_P(zv), dest, initialized, DateInterval)
+#define DATE_FETCH_DATE(zv, dest) (DATE_IS_INSTANCE(zv, date) && DATE_VALID_DATE(zv, dest, DateTime))
+#define DATE_FETCH_IMMUTABLE(zv, dest) (DATE_IS_INSTANCE(zv, immutable) && DATE_VALID_DATE(zv, dest, DateTimeImmutable))
+#define DATE_FETCH_INTERFACE(zv, dest) (DATE_FETCH_DATE(zv, dest) || DATE_FETCH_IMMUTABLE(zv, dest))
+#define DATE_FETCH_INTERVAL(zv, dest) (DATE_IS_INSTANCE(zv, interval) && DATE_VALID_INTERVAL(zv, dest))
 
 static void date_object_free_storage_date(zend_object *object);
 static void date_object_free_storage_timezone(zend_object *object);
@@ -676,6 +728,24 @@ static HashTable *date_object_get_properties_for_timezone(zval *object, zend_pro
 static HashTable *date_object_get_gc_timezone(zval *object, zval **table, int *n);
 static HashTable *date_object_get_debug_info_timezone(zval *object, int *is_temp);
 static void php_timezone_to_string(php_timezone_obj *tzobj, zval *zv);
+
+static timelib_time *php_date_add(zval *date, zval *interval);
+static timelib_time *php_date_sub(zval *date, zval *interval);
+static timelib_rel_time *php_date_diff(zval *date1, zval *date2);
+
+DATE_OBJ_OP_HANDLER_FUNCTION(date, ZEND_ADD);
+DATE_OBJ_OP_HANDLER_FUNCTION(date, ZEND_SUB);
+DATE_OBJ_OP_HANDLERS_BEGIN(date)
+	DATE_OBJ_OP_HANDLER(date, ZEND_ADD)
+	DATE_OBJ_OP_HANDLER(date, ZEND_SUB)
+DATE_OBJ_OP_HANDLERS_END()
+
+DATE_OBJ_OP_HANDLER_FUNCTION(immutable, ZEND_ADD);
+DATE_OBJ_OP_HANDLER_FUNCTION(immutable, ZEND_SUB);
+DATE_OBJ_OP_HANDLERS_BEGIN(immutable)
+	DATE_OBJ_OP_HANDLER(immutable, ZEND_ADD)
+	DATE_OBJ_OP_HANDLER(immutable, ZEND_SUB)
+DATE_OBJ_OP_HANDLERS_END()
 
 zval *date_interval_read_property(zval *object, zval *member, int type, void **cache_slot, zval *rv);
 void date_interval_write_property(zval *object, zval *member, zval *value, void **cache_slot);
@@ -2125,6 +2195,7 @@ static void date_register_classes(void) /* {{{ */
 	date_object_handlers_date.compare_objects = date_object_compare_date;
 	date_object_handlers_date.get_properties_for = date_object_get_properties_for;
 	date_object_handlers_date.get_gc = date_object_get_gc;
+	date_object_handlers_date.do_operation = DATE_OBJ_DO_OPERATION_FN(date);
 	zend_class_implements(date_ce_date, 1, date_ce_interface);
 
 	INIT_CLASS_ENTRY(ce_immutable, "DateTimeImmutable", date_funcs_immutable);
@@ -2135,6 +2206,7 @@ static void date_register_classes(void) /* {{{ */
 	date_object_handlers_immutable.compare_objects = date_object_compare_date;
 	date_object_handlers_immutable.get_properties_for = date_object_get_properties_for;
 	date_object_handlers_immutable.get_gc = date_object_get_gc;
+	date_object_handlers_immutable.do_operation = DATE_OBJ_DO_OPERATION_FN(immutable);
 	zend_class_implements(date_ce_immutable, 1, date_ce_interface);
 
 	INIT_CLASS_ENTRY(ce_timezone, "DateTimeZone", date_funcs_timezone);
@@ -2239,6 +2311,13 @@ static void date_clone_immutable(zval *object, zval *new_object) /* {{{ */
 {
 	ZVAL_OBJ(new_object, date_object_clone_date(object));
 } /* }}} */
+
+#define DATE_OBJ_REPLACE_TIME(zv, new_time) do { \
+	timelib_time *_t = new_time;                 \
+	php_date_obj *_o = Z_PHPDATE_P(zv);          \
+	timelib_time_dtor(_o->time);                 \
+	_o->time = _t;                               \
+} while(0)
 
 static int date_object_compare_date(zval *d1, zval *d2) /* {{{ */
 {
@@ -3300,20 +3379,14 @@ PHP_METHOD(DateTimeImmutable, modify)
 }
 /* }}} */
 
-static void php_date_add(zval *object, zval *interval, zval *return_value) /* {{{ */
+static timelib_time *php_date_add(zval *date, zval *interval) /* {{{ */
 {
 	php_date_obj     *dateobj;
 	php_interval_obj *intobj;
-	timelib_time     *new_time;
 
-	dateobj = Z_PHPDATE_P(object);
-	DATE_CHECK_INITIALIZED(dateobj->time, DateTime);
-	intobj = Z_PHPINTERVAL_P(interval);
-	DATE_CHECK_INITIALIZED(intobj->initialized, DateInterval);
-
-	new_time = timelib_add(dateobj->time, intobj->diff);
-	timelib_time_dtor(dateobj->time);
-	dateobj->time = new_time;
+	return DATE_FETCH_INTERFACE(date, dateobj) && DATE_FETCH_INTERVAL(interval, intobj)
+		? timelib_add(dateobj->time, intobj->diff)
+		: NULL;
 } /* }}} */
 
 /* {{{ proto DateTime date_add(DateTime object, DateInterval interval)
@@ -3322,15 +3395,48 @@ static void php_date_add(zval *object, zval *interval, zval *return_value) /* {{
 PHP_FUNCTION(date_add)
 {
 	zval *object, *interval;
+	timelib_time *new_time;	diff = php_date_diff(object1, object2);
+	if (absolute) {
+		diff->invert = 0;
+	}
+
+	php_date_instantiate(date_ce_interval, return_value);
+	interval = Z_PHPINTERVAL_P(return_value);
+	interval->diff = diff;
+	interval->initialized = 1;
+
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), "OO", &object, date_ce_date, &interval, date_ce_interval) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	php_date_add(object, interval, return_value);
+	new_time = php_date_add(object, interval);
+	if (!new_time) {
+		RETURN_FALSE;
+	}
+
+	DATE_OBJ_REPLACE_TIME(object, new_time);
 
 	Z_ADDREF_P(object);
 	ZVAL_COPY_VALUE(return_value, object);
+}
+/* }}} */
+
+DATE_OBJ_OP_HANDLER_FUNCTION(date, ZEND_ADD) /* {{{ */
+{
+	timelib_time *new_time;
+
+	new_time = php_date_add(op1, op2);
+	if (!new_time) {
+		return FAILURE;
+	}
+
+	DATE_OBJ_REPLACE_TIME(op1, new_time);
+
+	ZVAL_COPY_VALUE(result, op1);
+	Z_ADDREF_P(result);
+
+	return SUCCESS;
 }
 /* }}} */
 
@@ -3339,37 +3445,55 @@ PHP_FUNCTION(date_add)
 PHP_METHOD(DateTimeImmutable, add)
 {
 	zval *object, *interval, new_object;
+	timelib_time *new_time;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), "OO", &object, date_ce_immutable, &interval, date_ce_interval) == FAILURE) {
 		RETURN_FALSE;
 	}
 
+	new_time = php_date_add(object, interval);
+	if (!new_time) {
+		RETURN_FALSE;
+	}
+
 	date_clone_immutable(object, &new_object);
-	php_date_add(&new_object, interval, return_value);
+	DATE_OBJ_REPLACE_TIME(&new_object, new_time);
 
 	ZVAL_OBJ(return_value, Z_OBJ(new_object));
 }
 /* }}} */
 
-static void php_date_sub(zval *object, zval *interval, zval *return_value) /* {{{ */
+DATE_OBJ_OP_HANDLER_FUNCTION(immutable, ZEND_ADD) /* {{{ */
+{
+	timelib_time *new_time;
+
+	new_time = php_date_add(op1, op2);
+	if (!new_time) {
+		return FAILURE;
+	}
+
+	/* if the op is an assignment and the only reference replace the value, otherwise create a new instance */
+	if (assign && Z_REFCOUNT_P(op1) == 1) {
+		ZVAL_COPY_VALUE(result, op1);
+		Z_ADDREF_P(result);
+	} else {
+		date_clone_immutable(op1, result);
+	}
+
+	DATE_OBJ_REPLACE_TIME(result, new_time);
+
+	return SUCCESS;
+}
+/* }}} */
+
+static timelib_time *php_date_sub(zval *date, zval *interval) /* {{{ */
 {
 	php_date_obj     *dateobj;
 	php_interval_obj *intobj;
-	timelib_time     *new_time;
 
-	dateobj = Z_PHPDATE_P(object);
-	DATE_CHECK_INITIALIZED(dateobj->time, DateTime);
-	intobj = Z_PHPINTERVAL_P(interval);
-	DATE_CHECK_INITIALIZED(intobj->initialized, DateInterval);
-
-	if (intobj->diff->have_special_relative) {
-		php_error_docref(NULL, E_WARNING, "Only non-special relative time specifications are supported for subtraction");
-		return;
-	}
-
-	new_time = timelib_sub(dateobj->time, intobj->diff);
-	timelib_time_dtor(dateobj->time);
-	dateobj->time = new_time;
+	return DATE_FETCH_INTERFACE(date, dateobj) && DATE_FETCH_INTERVAL(interval, intobj)
+		   ? timelib_sub(dateobj->time, intobj->diff)
+		   : NULL;
 } /* }}} */
 
 /* {{{ proto DateTime date_sub(DateTime object, DateInterval interval)
@@ -3378,15 +3502,39 @@ static void php_date_sub(zval *object, zval *interval, zval *return_value) /* {{
 PHP_FUNCTION(date_sub)
 {
 	zval *object, *interval;
+	timelib_time *new_time;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), "OO", &object, date_ce_date, &interval, date_ce_interval) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	php_date_sub(object, interval, return_value);
+	new_time = php_date_sub(object, interval);
+	if (!new_time) {
+		RETURN_FALSE;
+	}
+
+	DATE_OBJ_REPLACE_TIME(object, new_time);
 
 	Z_ADDREF_P(object);
 	ZVAL_COPY_VALUE(return_value, object);
+}
+/* }}} */
+
+DATE_OBJ_OP_HANDLER_FUNCTION(date, ZEND_SUB) /* {{{ */
+{
+	timelib_time *new_time;
+
+	new_time = php_date_sub(op1, op2);
+	if (!new_time) {
+		return FAILURE;
+	}
+
+	DATE_OBJ_REPLACE_TIME(op1, new_time);
+
+	ZVAL_COPY_VALUE(result, op1);
+	Z_ADDREF_P(result);
+
+	return SUCCESS;
 }
 /* }}} */
 
@@ -3395,18 +3543,65 @@ PHP_FUNCTION(date_sub)
 PHP_METHOD(DateTimeImmutable, sub)
 {
 	zval *object, *interval, new_object;
+	timelib_time *new_time;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), "OO", &object, date_ce_immutable, &interval, date_ce_interval) == FAILURE) {
 		RETURN_FALSE;
 	}
 
+	new_time = php_date_sub(object, interval);
+	if (!new_time) {
+		RETURN_FALSE;
+	}
+
 	date_clone_immutable(object, &new_object);
-	php_date_sub(&new_object, interval, return_value);
+	DATE_OBJ_REPLACE_TIME(&new_object, new_time);
 
 	ZVAL_OBJ(return_value, Z_OBJ(new_object));
 }
 /* }}} */
 
+DATE_OBJ_OP_HANDLER_FUNCTION(immutable, ZEND_SUB) /* {{{ */
+{
+	if (DATE_IS_INSTANCE(op2, interval)) {
+		timelib_time *new_time;
+
+		new_time = php_date_sub(op1, op2);
+		if (!new_time) {
+			return FAILURE;
+		}
+
+		/* if the op is an assignment and the only reference replace the value, otherwise create a new instance */
+		if (assign && Z_REFCOUNT_P(op1) == 1) {
+			ZVAL_COPY_VALUE(result, op1);
+			Z_ADDREF_P(result);
+		} else {
+			date_clone_immutable(op1, result);
+		}
+
+		DATE_OBJ_REPLACE_TIME(result, new_time);
+
+		return SUCCESS;
+	} else { /* assume interface instance */
+		timelib_rel_time *diff;
+		php_interval_obj *interval;
+
+		diff = php_date_diff(op1, op2);
+		if (diff == NULL) {
+			return FAILURE;
+		}
+
+		php_date_instantiate(date_ce_interval, result);
+		interval = Z_PHPINTERVAL_P(result);
+		interval->diff = diff;
+		interval->initialized = 1;
+
+		return SUCCESS;
+	}
+}
+/* }}} */
+
+/* }}} */
 static void set_timezone_from_timelib_time(php_timezone_obj *tzobj, timelib_time *t)
 {
        tzobj->initialized = 1;
@@ -3772,32 +3967,46 @@ PHP_FUNCTION(date_timestamp_get)
 }
 /* }}} */
 
+static timelib_rel_time *php_date_diff(zval *date1, zval *date2) /* {{{ */
+{
+	php_date_obj *dateobj1, *dateobj2;
+
+	if (!(DATE_FETCH_INTERFACE(date1, dateobj1) && DATE_FETCH_INTERFACE(date2, dateobj2))) {
+		return NULL;
+	}
+
+	timelib_update_ts(dateobj1->time, NULL);
+	timelib_update_ts(dateobj2->time, NULL);
+
+	return timelib_diff(dateobj1->time, dateobj2->time);
+} /* }}} */
+
 /* {{{ proto DateInterval date_diff(DateTime object [, bool absolute])
    Returns the difference between two DateTime objects.
 */
 PHP_FUNCTION(date_diff)
 {
-	zval         *object1, *object2;
-	php_date_obj *dateobj1, *dateobj2;
+	zval             *object1, *object2;
+	zend_bool        absolute = 0;
+	timelib_rel_time *diff;
 	php_interval_obj *interval;
-	zend_bool      absolute = 0;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), "OO|b", &object1, date_ce_interface, &object2, date_ce_interface, &absolute) == FAILURE) {
 		RETURN_FALSE;
 	}
-	dateobj1 = Z_PHPDATE_P(object1);
-	dateobj2 = Z_PHPDATE_P(object2);
-	DATE_CHECK_INITIALIZED(dateobj1->time, DateTimeInterface);
-	DATE_CHECK_INITIALIZED(dateobj2->time, DateTimeInterface);
-	timelib_update_ts(dateobj1->time, NULL);
-	timelib_update_ts(dateobj2->time, NULL);
+
+	diff = php_date_diff(object1, object2);
+	if (diff == NULL) {
+		RETURN_FALSE;
+	}
+
+	if (absolute) {
+		diff->invert = 0;
+	}
 
 	php_date_instantiate(date_ce_interval, return_value);
 	interval = Z_PHPINTERVAL_P(return_value);
-	interval->diff = timelib_diff(dateobj1->time, dateobj2->time);
-	if (absolute) {
-		interval->diff->invert = 0;
-	}
+	interval->diff = diff;
 	interval->initialized = 1;
 }
 /* }}} */

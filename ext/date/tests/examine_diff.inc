@@ -13,6 +13,8 @@ define('PHPT_DATETIME_SHOW_DIFF', 1);
 define('PHPT_DATETIME_SHOW_DAYS', 2);
 define('PHPT_DATETIME_SHOW_ADD', 3);
 define('PHPT_DATETIME_SHOW_SUB', 4);
+define('PHPT_DATETIME_SHOW_ADD_OP', 5);
+define('PHPT_DATETIME_SHOW_SUB_OP', 6);
 /**#@-*/
 
 /**
@@ -75,5 +77,19 @@ function examine_diff($end_date, $start_date, $expect_spec, $expect_days, $absol
 		$result_start_date = $end->format('Y-m-d H:i:s T');
 		echo "SUB: $end_date - $expect_spec = **$result_start_date**\n";
 		// echo "SUB: $end_date - $expect_spec = **$start_date**\n";
+	}
+	if (PHPT_DATETIME_SHOW == PHPT_DATETIME_SHOW_ADD_OP) {
+		printf(
+			"ADD OP: %s + %s = **%s**\n",
+			$start_date, $expect_spec,
+			($start + $expect_interval)->format('Y-m-d H:i:s T')
+		);
+	}
+	if (PHPT_DATETIME_SHOW == PHPT_DATETIME_SHOW_SUB_OP) {
+		printf(
+			"SUB OP: %s - %s = **%s**\n",
+			$end_date, $expect_spec,
+			($end - $expect_interval)->format('Y-m-d H:i:s T')
+		);
 	}
 }
