@@ -41,52 +41,88 @@
 #include "microtime.h"
 #include "ext/date/php_date.h"
 
-#define NUL  '\0'
-#define MICRO_IN_SEC 1000000.00
 #define SEC_IN_MIN 60
 
 #ifdef HAVE_GETTIMEOFDAY
-static void _php_gettimeofday(INTERNAL_FUNCTION_PARAMETERS, int mode)
-{
-	zend_bool get_as_float = 0;
-	struct timeval tp = {0};
 
-	ZEND_PARSE_PARAMETERS_START(0, 1)
-		Z_PARAM_OPTIONAL
-		Z_PARAM_BOOL(get_as_float)
-	ZEND_PARSE_PARAMETERS_END();
-
-	if (gettimeofday(&tp, NULL)) {
-		RETURN_FALSE;
-	}
-
-	if (get_as_float) {
-		RETURN_DOUBLE((double)(tp.tv_sec + tp.tv_usec / MICRO_IN_SEC));
-	}
-
-	if (mode) {
-		timelib_time_offset *offset;
-
-		offset = timelib_get_time_zone_info(tp.tv_sec, get_timezone_info());
-
-		array_init(return_value);
-		add_assoc_long(return_value, "sec", tp.tv_sec);
-		add_assoc_long(return_value, "usec", tp.tv_usec);
-
-		add_assoc_long(return_value, "minuteswest", -offset->offset / SEC_IN_MIN);
-		add_assoc_long(return_value, "dsttime", offset->is_dst);
-
-		timelib_time_offset_dtor(offset);
-	} else {
-		RETURN_NEW_STR(zend_strpprintf(0, "%.8F %ld", tp.tv_usec / MICRO_IN_SEC, (long)tp.tv_sec));
-	}
-}
+#define CONVERT_TIMEVAL_TO_NUMBER(tv, scale, type) (((type)(tv).tv_sec * (type)(scale)) + ((type)(tv).tv_usec / ((type)TIME_SCALE_USECS / (type)(scale))))
+#define CONVERT_TIMEVAL_TO_LONG(tv, scale) CONVERT_TIMEVAL_TO_NUMBER(tv, scale, zend_long)
+#define CONVERT_TIMEVAL_TO_DOUBLE(tv, scale) CONVERT_TIMEVAL_TO_NUMBER(tv, scale, double)
 
 /* {{{ proto mixed microtime([bool get_as_float])
    Returns either a string or a float containing the current time in seconds and microseconds */
 PHP_FUNCTION(microtime)
 {
-	_php_gettimeofday(INTERNAL_FUNCTION_PARAM_PASSTHRU, 0);
+	int scale = 0, round = 0;
+	struct timeval tv;
+
+	if (EXPECTED(ZEND_NUM_ARGS() > 0)) {
+		zval *zformat;
+
+		ZEND_PARSE_PARAMETERS_START(0, 1)
+			Z_PARAM_OPTIONAL
+			Z_PARAM_ZVAL(zformat)
+		ZEND_PARSE_PARAMETERS_END();
+
+		switch (Z_TYPE_P(zformat)) {
+			case IS_LONG:
+				scale = Z_LVAL_P(zformat) & ~TIME_FORMAT_INT;
+				round = (Z_LVAL_P(zformat) & TIME_FORMAT_INT) != 0;
+				break;
+
+			case IS_TRUE:
+				scale = 1;
+				break;
+
+			case IS_FALSE:
+				break;
+
+			default:
+				if (ZEND_ARG_USES_STRICT_TYPES()) {
+					zend_type_error("microtime() expects parameter 1 to be integer or boolean, %s given", zend_zval_type_name(zformat));
+					return;
+				}
+				scale = zend_is_true(zformat);
+		}
+	}
+
+	if (UNEXPECTED(gettimeofday(&tv, NULL) != SUCCESS)) {
+		RETURN_FALSE;
+	}
+
+	if (UNEXPECTED(scale == 0)) {
+		RETURN_NEW_STR(zend_strpprintf(0, "%.8F %ld", (double)tv.tv_usec / TIME_SCALE_USECS, (long)tv.tv_sec));
+	}
+
+	if (!round) {
+		RETURN_DOUBLE(CONVERT_TIMEVAL_TO_DOUBLE(tv, scale));
+	}
+
+	switch (scale) {
+		case TIME_SCALE_SECS:
+			RETURN_LONG((zend_long)tv.tv_sec);
+
+#if SIZEOF_ZEND_LONG > 4
+		/* optimized special-cases for common units using integer math
+		   on 64-bit only - sub-seconds will overflow int32 */
+		case TIME_SCALE_MSECS: case TIME_SCALE_USECS:
+			RETURN_LONG(CONVERT_TIMEVAL_TO_LONG(tv, scale));
+
+		/* timeval only has usec precision, emulate nsecs */
+		case TIME_SCALE_NSECS:
+			RETURN_LONG(CONVERT_TIMEVAL_TO_LONG(tv, TIME_SCALE_USECS) * 1000);
+#endif
+
+		default: {
+			double result = CONVERT_TIMEVAL_TO_DOUBLE(tv, scale);
+
+			if (result <= ZEND_LONG_MAX) {
+				RETURN_LONG((zend_long)result);
+			}
+
+			RETURN_DOUBLE(floor(result));
+		}
+	}
 }
 /* }}} */
 
@@ -94,7 +130,33 @@ PHP_FUNCTION(microtime)
    Returns the current time as array */
 PHP_FUNCTION(gettimeofday)
 {
-	_php_gettimeofday(INTERNAL_FUNCTION_PARAM_PASSTHRU, 1);
+	zend_bool get_as_float = 0;
+	struct timeval tv = {0};
+	timelib_time_offset *offset;
+
+	ZEND_PARSE_PARAMETERS_START(0, 1)
+		Z_PARAM_OPTIONAL
+		Z_PARAM_BOOL(get_as_float)
+	ZEND_PARSE_PARAMETERS_END();
+
+	if (UNEXPECTED(gettimeofday(&tv, NULL) != SUCCESS)) {
+		RETURN_FALSE;
+	}
+
+	if (get_as_float) {
+		RETURN_DOUBLE(CONVERT_TIMEVAL_TO_DOUBLE(tv, 1));
+	}
+
+	offset = timelib_get_time_zone_info(tv.tv_sec, get_timezone_info());
+
+	array_init(return_value);
+	add_assoc_long(return_value, "sec", tv.tv_sec);
+	add_assoc_long(return_value, "usec", tv.tv_usec);
+
+	add_assoc_long(return_value, "minuteswest", -offset->offset / SEC_IN_MIN);
+	add_assoc_long(return_value, "dsttime", offset->is_dst);
+
+	timelib_time_offset_dtor(offset);
 }
 #endif
 /* }}} */
