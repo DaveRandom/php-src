@@ -53,7 +53,8 @@
    Returns either a string or a float containing the current time in seconds and microseconds */
 PHP_FUNCTION(microtime)
 {
-	int scale = 0, round = 0;
+	int32_t scale = 0;
+	int round = 0;
 	struct timeval tv;
 
 	if (EXPECTED(ZEND_NUM_ARGS() > 0)) {
@@ -66,7 +67,7 @@ PHP_FUNCTION(microtime)
 
 		switch (Z_TYPE_P(zformat)) {
 			case IS_LONG:
-				scale = Z_LVAL_P(zformat) & ~TIME_FORMAT_INT;
+				scale = (int32_t)(Z_LVAL_P(zformat) & ~TIME_FORMAT_INT);
 				round = (Z_LVAL_P(zformat) & TIME_FORMAT_INT) != 0;
 				break;
 
@@ -78,7 +79,7 @@ PHP_FUNCTION(microtime)
 				break;
 
 			default:
-				if (ZEND_ARG_USES_STRICT_TYPES()) {
+				if (UNEXPECTED(ZEND_ARG_USES_STRICT_TYPES())) {
 					zend_type_error("microtime() expects parameter 1 to be integer or boolean, %s given", zend_zval_type_name(zformat));
 					return;
 				}
@@ -94,7 +95,7 @@ PHP_FUNCTION(microtime)
 		RETURN_NEW_STR(zend_strpprintf(0, "%.8F %ld", (double)tv.tv_usec / TIME_SCALE_USECS, (long)tv.tv_sec));
 	}
 
-	if (!round) {
+	if (EXPECTED(!round)) {
 		RETURN_DOUBLE(CONVERT_TIMEVAL_TO_DOUBLE(tv, scale));
 	}
 
