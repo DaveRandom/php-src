@@ -1213,6 +1213,9 @@ ZEND_API zend_function *zend_get_call_trampoline_func(zend_class_entry *ce, zend
 	func->required_num_args = 0;
 	func->arg_info = 0;
 
+	func->function_interface_cache_size = 0;
+	func->function_interface_cache = NULL;
+
 	return (zend_function*)func;
 }
 /* }}} */

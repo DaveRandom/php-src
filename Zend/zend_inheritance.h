@@ -29,6 +29,18 @@ ZEND_API void zend_do_inheritance(zend_class_entry *ce, zend_class_entry *parent
 
 ZEND_API void zend_do_link_class(zend_class_entry *ce, zend_class_entry *parent_ce);
 
+/* Unresolved means that class declarations that are currently not available are needed to
+ * determine whether the inheritance is valid or not. At runtime UNRESOLVED should be treated
+ * as an ERROR. */
+typedef enum {
+    ZEND_INHERITANCE_UNRESOLVED = -1,
+    ZEND_INHERITANCE_ERROR = 0,
+    ZEND_INHERITANCE_SUCCESS = 1,
+} zend_inheritance_status;
+
+ZEND_API zend_inheritance_status zend_check_function_compatibility(const zend_function *fe, const zend_function *proto, zend_string **unresolved_class);
+ZEND_API zend_bool zend_check_function_interface_implementation(zval *zfunc, zend_class_entry *ce);
+
 void zend_verify_abstract_class(zend_class_entry *ce);
 void zend_build_properties_info_table(zend_class_entry *ce);
 zend_bool zend_can_early_bind(zend_class_entry *ce, zend_class_entry *parent_ce);

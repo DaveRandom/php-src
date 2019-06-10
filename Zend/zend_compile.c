@@ -6144,6 +6144,64 @@ static zend_string *zend_generate_anon_class_name(unsigned char *lex_pos) /* {{{
 }
 /* }}} */
 
+static void zend_compile_function_interface_invoke_method(zend_ast_decl *decl)
+{
+    zend_ast *params_ast = decl->child[2];
+    zend_ast *return_type_ast = decl->child[3];
+
+    zend_op_array *orig_op_array = CG(active_op_array);
+    zend_op_array *op_array = zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
+    zend_oparray_context orig_oparray_context;
+
+    /* todo: clean this up - are any of these allocs are required for abstract method? */
+    init_op_array(op_array, ZEND_USER_FUNCTION, INITIAL_OP_ARRAY_SIZE);
+    ZEND_MAP_PTR_INIT(op_array->run_time_cache, zend_arena_alloc(&CG(arena), sizeof(void*)));
+    ZEND_MAP_PTR_SET(op_array->run_time_cache, NULL);
+
+    op_array->fn_flags |= ZEND_ACC_PUBLIC | (decl->flags & ZEND_ACC_RETURN_REFERENCE);
+    op_array->fn_flags |= (orig_op_array->fn_flags & ZEND_ACC_STRICT_TYPES); /* todo: not relevant to abstract method? */
+    op_array->line_start = decl->start_lineno;
+    op_array->line_end = decl->end_lineno;
+
+    if (decl->doc_comment) {
+        op_array->doc_comment = zend_string_copy(decl->doc_comment);
+    }
+
+    zend_begin_method_decl(op_array, ZSTR_KNOWN(ZEND_STR_MAGIC_INVOKE), 0);
+
+    CG(active_op_array) = op_array;
+    zend_oparray_context_begin(&orig_oparray_context);
+
+    if (CG(compiler_options) & ZEND_COMPILE_EXTENDED_STMT) {
+        zend_op *opline_ext = zend_emit_op(NULL, ZEND_EXT_NOP, NULL, NULL);
+        opline_ext->lineno = decl->start_lineno;
+    }
+
+    {
+        /* Push a separator to the loop variable stack */
+        zend_loop_var dummy_var;
+        dummy_var.opcode = ZEND_RETURN;
+
+        zend_stack_push(&CG(loop_var_stack), (void *) &dummy_var);
+    }
+
+    zend_compile_params(params_ast, return_type_ast);
+
+    /* put the implicit return on the really last line */
+    CG(zend_lineno) = decl->end_lineno;
+
+    zend_do_extended_stmt();
+    zend_emit_final_return(0);
+
+    pass_two(CG(active_op_array));
+    zend_oparray_context_end(&orig_oparray_context);
+
+    /* Pop the loop variable stack separator */
+    zend_stack_del_top(&CG(loop_var_stack));
+
+    CG(active_op_array) = orig_op_array;
+}
+
 zend_op *zend_compile_class_decl(zend_ast *ast, zend_bool toplevel) /* {{{ */
 {
 	zend_ast_decl *decl = (zend_ast_decl *) ast;
@@ -6188,7 +6246,7 @@ zend_op *zend_compile_class_decl(zend_ast *ast, zend_bool toplevel) /* {{{ */
 	ce->name = name;
 	zend_initialize_class_data(ce, 1);
 
-	ce->ce_flags |= decl->flags;
+	ce->ce_flags |= decl->flags & ~ZEND_ACC_RETURN_REFERENCE;
 	ce->info.user.filename = zend_get_compiled_filename();
 	ce->info.user.line_start = decl->start_lineno;
 	ce->info.user.line_end = decl->end_lineno;
@@ -6226,7 +6284,11 @@ zend_op *zend_compile_class_decl(zend_ast *ast, zend_bool toplevel) /* {{{ */
 
 	CG(active_class_entry) = ce;
 
-	zend_compile_stmt(stmt_ast);
+	if (UNEXPECTED(ce->ce_flags & ZEND_ACC_FUNCTION_INTERFACE)) {
+        zend_compile_function_interface_invoke_method(decl);
+	} else {
+        zend_compile_stmt(stmt_ast);
+	}
 
 	/* Reset lineno for final opcodes and errors */
 	CG(zend_lineno) = ast->lineno;

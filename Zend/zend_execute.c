@@ -136,6 +136,7 @@ ZEND_API const zend_internal_function zend_pass_function = {
 	0,                      /* num_args          */
 	0,                      /* required_num_args */
 	NULL,                   /* arg_info          */
+	0, NULL,                /* function_interface_cache */
 	ZEND_FN(pass),          /* handler           */
 	NULL,                   /* module            */
 	{NULL,NULL,NULL,NULL}   /* reserved          */
@@ -1047,6 +1048,9 @@ static zend_always_inline zend_bool zend_check_type(
 			}
 			*cache_slot = (void *) *ce;
 		}
+        if ((*ce)->ce_flags & ZEND_ACC_FUNCTION_INTERFACE) {
+            return zend_check_function_interface_implementation(arg, *ce);
+        }
 		if (EXPECTED(Z_TYPE_P(arg) == IS_OBJECT)) {
 			return instanceof_function(Z_OBJCE_P(arg), *ce);
 		}
